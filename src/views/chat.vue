@@ -3,12 +3,50 @@ import { defaultMockModelName, modelMappingList, triggerModelTermination } from 
 import { type InputInst } from 'naive-ui'
 import type { SelectBaseOption } from 'naive-ui/es/select/src/interface'
 import { isGithubDeployed } from '@/config'
+import NavSideBar from '@/components/Navigation/NavSideBar.vue'
 
 import { UAParser } from 'ua-parser-js'
 
 const route = useRoute()
 const router = useRouter()
 const businessStore = useBusinessStore()
+
+// RAG相关：分类映射（与后端 CATEGORIES 对齐）
+const categoryMap: Record<string, string> = {
+  policy_postgraduate: '🎓 保研政策',
+  policy_scholarship: '🏅 奖学金政策',
+  policy_graduation: '📝 毕业论文/设计',
+  policy_major_split: '🔀 专业分流',
+  policy_general: '📋 通用政策',
+  major_intro: '📚 专业介绍',
+  major_program: '📖 培养方案',
+  career: '💼 就业方向',
+  general: '💬 通用问答'
+}
+
+// 检查后端连接
+onMounted(async () => {
+  const connected = await businessStore.checkBackendConnection()
+  if (connected) {
+    console.log('✅ 后端服务已连接，RAG模式已启用')
+  } else {
+    console.warn('⚠️ 后端服务未连接，将使用直调模式')
+  }
+})
+
+// 监听会话ID变化，加载历史记录
+watch(() => businessStore.currentChatId, (newId) => {
+  if (newId) {
+    businessStore.loadChatHistory(newId)
+    // 重置输入框和状态，但保留输入内容
+    // handleResetState() // 移除这行，避免清空输入框
+    stylizingLoading.value = false
+    callPreviewMethod('resetStatus')
+  } else {
+    // 如果没有ID（比如刚删除完），清空消息
+    businessStore.messageList = []
+  }
+})
 
 
 const modelListSelections = computed(() => {
@@ -51,12 +89,29 @@ const outputTextReader = ref<ReadableStreamDefaultReader | null>()
 
 const refReaderMarkdownPreview = ref<any>()
 
+/**
+ * 安全调用 MarkdownPreview 组件的方法
+ * 因为在 v-for 中使用 ref，refReaderMarkdownPreview.value 可能是数组
+ */
+const callPreviewMethod = (methodName: string, ...args: any[]) => {
+  const val = refReaderMarkdownPreview.value
+  if (!val) return
+
+  if (Array.isArray(val)) {
+    val.forEach(item => {
+      if (item && typeof item[methodName] === 'function') {
+        item[methodName](...args)
+      }
+    })
+  } else if (typeof val[methodName] === 'function') {
+    val[methodName](...args)
+  }
+}
+
 const onFailedReader = () => {
   outputTextReader.value = null
   stylizingLoading.value = false
-  if (refReaderMarkdownPreview.value) {
-    refReaderMarkdownPreview.value.initializeEnd()
-  }
+  callPreviewMethod('initializeEnd')
   window.$ModalMessage.error('转换失败，请重试')
   setTimeout(() => {
     if (refInputTextString.value) {
@@ -67,6 +122,8 @@ const onFailedReader = () => {
 }
 const onCompletedReader = () => {
   stylizingLoading.value = false
+  // 对话完成后，重新拉取历史记录以更新标题（确保“新对话”标题被替换）
+  businessStore.loadHistoryList()
   setTimeout(() => {
     if (refInputTextString.value) {
       refInputTextString.value.focus()
@@ -78,20 +135,25 @@ const onCompletedReader = () => {
 const handleCreateStylized = async () => {
   // 若正在加载，则点击后恢复初始状态
   if (stylizingLoading.value) {
-    refReaderMarkdownPreview.value.abortReader()
+    callPreviewMethod('abortReader')
     onCompletedReader()
     return
   }
 
-
-  if (refInputTextString.value && !inputTextString.value.trim()) {
-    inputTextString.value = ''
-    refInputTextString.value.focus()
+  // 检查输入内容
+  if (!inputTextString.value.trim()) {
+    if (refInputTextString.value) {
+      refInputTextString.value.focus()
+    }
     return
   }
 
-  refReaderMarkdownPreview.value.resetStatus()
-  refReaderMarkdownPreview.value.initializeStart()
+  // 滚动到底部
+  scrollToBottom()
+
+  // 如果正在使用 Markdown 预览器，重置它
+  callPreviewMethod('resetStatus')
+  callPreviewMethod('initializeStart')
 
   stylizingLoading.value = true
   const textContent = inputTextString.value
@@ -107,6 +169,8 @@ const handleCreateStylized = async () => {
 
   if (reader) {
     outputTextReader.value = reader
+    // 开始流式输出后，重新拉取历史记录以更新标题
+    businessStore.loadHistoryList()
   }
 }
 
@@ -176,8 +240,8 @@ const handleResetState = () => {
   nextTick(() => {
     refInputTextString.value?.focus()
   })
-  refReaderMarkdownPreview.value?.abortReader()
-  refReaderMarkdownPreview.value?.resetStatus()
+  callPreviewMethod('abortReader')
+  callPreviewMethod('resetStatus')
 }
 handleResetState()
 
@@ -232,10 +296,25 @@ const PromptTag = defineComponent({
 })
 
 const promptTextList = ref([
-  '打个招呼吧，并告诉我你的名字',
-  '使用中文，回答以下两个问题，分段表示\n1、你是什么模型？\n2、请分别使用 Vue3 和 React 编写一个 Button 组件，要求在 Vue3 中使用 Setup Composition API 语法糖，在 React 中使用 TSX 语法'
+  '计算机科学与技术专业的保研条件是什么？',
+  '软件工程方向有哪些就业前景？需要学哪些课程？',
+  '计算机类专业培养方案中有哪些核心课程？'
 ])
 
+const messageListRef = ref<HTMLElement | null>(null)
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messageListRef.value) {
+      messageListRef.value.scrollTop = messageListRef.value.scrollHeight
+    }
+  })
+}
+
+// 监听消息列表变化，自动滚动到底部
+watch(() => businessStore.messageList.length, () => {
+  scrollToBottom()
+})
 
 </script>
 
@@ -243,6 +322,10 @@ const promptTextList = ref([
   <LayoutCenterPanel
     :loading="loading"
   >
+    <template #sidebar>
+      <NavSideBar />
+    </template>
+
     <!-- 内容区域 -->
     <div
       flex="~ col"
@@ -268,19 +351,53 @@ const promptTextList = ref([
                   :disabled="stylizingLoading"
                   :options="modelListSelections"
                 />
+
+                <!-- RAG模式开关 -->
+                <n-tooltip v-if="businessStore.backendConnected">
+                  <template #trigger>
+                    <n-switch
+                      v-model:value="businessStore.useRAG"
+                      class="ml-10"
+                      :disabled="stylizingLoading"
+                    >
+                      <template #checked>
+                        RAG
+                      </template>
+                      <template #unchecked>
+                        直调
+                      </template>
+                    </n-switch>
+                  </template>
+                  <div>{{ businessStore.useRAG ? 'RAG增强模式：使用知识库检索增强回答' : '直调模式：直接调用大模型' }}</div>
+                </n-tooltip>
+
                 <CustomTooltip
                   :disabled="false"
                 >
-                  <div>注意：</div>
-                  <div>
-                    演示环境仅支持 “模拟数据模型”
+                  <div>💡 系统说明：</div>
+                  <div
+                    v-if="businessStore.backendConnected"
+                    class="mt-5"
+                  >
+                    ✅ 后端服务：已连接
+                  </div>
+                  <div
+                    v-else
+                    class="mt-5"
+                  >
+                    ❌ 后端服务：未连接（需要启动）
+                  </div>
+                  <div class="mt-5">
+                    <strong>RAG模式</strong>：基于知识库检索增强回答
                   </div>
                   <div>
-                    如需测试其他模型请克隆<a
-                      href="https://github.com/pdsuwwz/chatgpt-vue3-light-mvp"
-                      target="_blank"
-                      class="px-2 underline c-warning font-bold"
-                    >本仓库</a>到本地运行
+                    <strong>直调模式</strong>：直接调用大模型（无知识库）
+                  </div>
+                  <div class="mt-5">
+                    <strong>架构说明</strong>：所有请求统一由后端处理
+                  </div>
+                  <div>
+                    API Key 配置在后端 .env 文件中
                   </div>
                   <template #trigger>
                     <span
@@ -297,18 +414,162 @@ const promptTextList = ref([
       </div>
 
       <div
+        ref="messageListRef"
         flex="1 ~ col"
         min-h-0
         pb-20
+        class="message-list-container"
       >
-        <MarkdownPreview
-          ref="refReaderMarkdownPreview"
-          v-model:reader="outputTextReader"
-          :model="businessStore.currentModelItem?.modelName"
-          :transform-stream-fn="businessStore.currentModelItem?.transformStreamValue"
-          @failed="onFailedReader"
-          @completed="onCompletedReader"
-        />
+        <!-- 骨架屏加载状态 -->
+        <div
+          v-if="businessStore.chatLoading"
+          class="px-4 py-2"
+        >
+          <div
+            v-for="i in 2"
+            :key="i"
+            class="mb-8"
+          >
+            <!-- 用户消息骨架 -->
+            <div class="flex flex-row-reverse items-start mb-6">
+              <n-skeleton
+                circle
+                size="medium"
+                class="ml-3 flex-shrink-0"
+              />
+              <n-skeleton
+                height="40px"
+                width="200px"
+                :sharp="false"
+                style="border-radius: 12px 0 12px 12px"
+              />
+            </div>
+            <!-- AI消息骨架 -->
+            <div class="flex items-start">
+              <n-skeleton
+                circle
+                size="medium"
+                class="mr-3 flex-shrink-0"
+              />
+              <div class="flex-1 space-y-2">
+                <n-skeleton
+                  text
+                  :repeat="2"
+                />
+                <n-skeleton
+                  text
+                  style="width: 60%"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 历史消息渲染 -->
+        <div
+          v-for="(msg, index) in businessStore.messageList"
+          v-else
+          :key="index"
+          class="message-item"
+          :class="msg.role"
+        >
+          <div class="message-avatar">
+            <div
+              v-if="msg.role === 'user'"
+              class="i-carbon-user-avatar-filled-alt text-24 c-gray-500"
+            ></div>
+            <div
+              v-else
+              class="i-carbon-bot text-24 c-blue-500"
+            ></div>
+          </div>
+          <div class="message-content">
+            <!-- 如果是最后一条且是 assistant，且正在生成中，使用 MarkdownPreview 组件渲染流式效果 -->
+            <template v-if="index === businessStore.messageList.length - 1 && msg.role === 'assistant' && stylizingLoading">
+              <!-- RAG信息显示 (仅在生成时显示在顶部，或者你可以选择一直显示) -->
+              <div
+                v-if="businessStore.useRAG && businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
+                class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
+              >
+                <n-space
+                  vertical
+                  :size="4"
+                >
+                  <n-space
+                    v-if="businessStore.currentCategory"
+                    align="center"
+                  >
+                    <span class="c-#666 dark:c-#ccc">分类:</span>
+                    <n-tag
+                      type="info"
+                      size="small"
+                      :bordered="false"
+                    >
+                      {{ categoryMap[businessStore.currentCategory] || businessStore.currentCategory }}
+                    </n-tag>
+                  </n-space>
+                  <n-space
+                    v-if="businessStore.contextSources.length > 0"
+                    align="center"
+                  >
+                    <span class="c-#666 dark:c-#ccc">来源:</span>
+                    <n-tag
+                      v-for="(source, idx) in businessStore.contextSources"
+                      :key="idx"
+                      type="success"
+                      size="small"
+                      :bordered="false"
+                    >
+                      📚 {{ source }}
+                    </n-tag>
+                  </n-space>
+                </n-space>
+              </div>
+
+              <MarkdownPreview
+                ref="refReaderMarkdownPreview"
+                v-model:reader="outputTextReader"
+                :model="businessStore.currentModelItem?.modelName"
+                :transform-stream-fn="businessStore.currentTransformFn"
+                @failed="onFailedReader"
+                @completed="onCompletedReader"
+              />
+            </template>
+            <!-- 否则渲染静态内容 (历史记录) -->
+            <template v-else>
+              <!-- 对于历史记录中的 AI 回答，也可以简单渲染 Markdown，这里简化处理直接显示文本或使用 v-html -->
+              <!-- 为了更好的体验，建议这里也使用 MarkdownPreview 但传入静态内容，或者使用 markdown-it 渲染 -->
+              <div
+                class="static-message-content"
+                style="white-space: pre-wrap;"
+              >
+                {{ msg.content }}
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- 欢迎页/空状态 -->
+        <div
+          v-if="businessStore.messageList.length === 0 && !businessStore.chatLoading"
+          class="flex flex-col items-center justify-center h-full text-gray-400"
+        >
+          <div class="i-carbon-chat text-64 mb-4"></div>
+          <div>问一个问题，我才会消失 ~</div>
+        </div>
+
+        <!-- 后端未连接警告 -->
+        <div
+          v-if="!businessStore.backendConnected"
+          class="px-20 py-10 mb-10 mx-14 bg-red-50 dark:bg-red-900/20 rounded-10"
+        >
+          <n-space align="center">
+            <span class="text-16 i-ic:round-error c-red-500"></span>
+            <span class="text-12 c-#666 dark:c-#ccc">
+              ⚠️ 后端服务未连接，无法使用。请启动后端服务：<code class="px-5 bg-gray-200">cd backend && npm run dev</code>
+            </span>
+          </n-space>
+        </div>
       </div>
 
       <div
@@ -355,7 +616,7 @@ const promptTextList = ref([
             position="absolute"
             :right="40"
             bottom="50%"
-            :type="stylizingLoading ? 'primary' : 'default'"
+            :type="stylizingLoading || inputTextString.trim() ? 'primary' : 'default'"
             color
             :class="[
               stylizingLoading && 'opacity-90',
@@ -369,7 +630,8 @@ const promptTextList = ref([
             ></div>
             <div
               v-else
-              class="transform-rotate-z--90 text-22 c-#303133/70 i-hugeicons:start-up-02"
+              class="transform-rotate-z--90 text-22 i-hugeicons:start-up-02"
+              :class="inputTextString.trim() ? 'c-#fff' : 'c-#303133/70'"
             ></div>
           </n-float-button>
         </div>
@@ -379,5 +641,54 @@ const promptTextList = ref([
 </template>
 
 <style lang="scss" scoped>
+.message-list-container {
+  overflow-y: auto;
+  padding: 20px;
+}
 
+.message-item {
+  display: flex;
+  margin-bottom: 24px;
+
+  &.user {
+    flex-direction: row-reverse;
+
+    .message-content {
+      background-color: #e6f7ff;
+      border-radius: 12px 0 12px 12px;
+      margin-right: 12px;
+    }
+
+    .message-avatar {
+      margin-left: 0;
+    }
+  }
+
+  &.assistant {
+    .message-content {
+      background-color: #f9f9f9;
+      border-radius: 0 12px 12px 12px;
+      margin-left: 12px;
+      width: 100%; // 让 Markdown 预览占满剩余空间
+    }
+  }
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.message-content {
+  padding: 12px 16px;
+  max-width: 85%;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+  overflow-wrap: break-word;
+}
+
+.static-message-content {
+  white-space: pre-wrap;
+}
 </style>

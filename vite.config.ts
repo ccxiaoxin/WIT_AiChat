@@ -47,6 +47,18 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true,
           rewrite: (path) => path.replace(/^\/deepseek/, '')
+        },
+        '/qwen': {
+          target: 'https://dashscope.aliyuncs.com',
+          changeOrigin: true,
+          ws: true,
+          rewrite: (path) => path.replace(/^\/qwen/, '')
+        },
+        // 后端API代理（开发环境）
+        '/api': {
+          target: env.VITE_API_BASE_URL || 'http://localhost:3000',
+          changeOrigin: true,
+          ws: true
         }
       }
     },

@@ -1,0 +1,15 @@
+services:
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    ports:
+      - "8000:8000"
+      - "3000:3000"  # 官方已将 Dashboard 端口整合到核心服务中
+    volumes:
+      - chroma-data:/chroma/.chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - LOG_LEVEL=DEBUG
+      - CHROMA_ENABLE_DASHBOARD=TRUE  # 启用内置 Dashboard
+
+volumes:
+  chroma-data:

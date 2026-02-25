@@ -38,7 +38,7 @@ const codeMessage: {
 // 创建axios实例
 const service: AxiosInstance = axios.create({
   // api 的 base_url
-  baseURL: currentHost.baseApi,
+  baseURL: 'http://localhost:3001/api',
   // 请求超时时间
   timeout: 200000
 })
@@ -46,7 +46,7 @@ const service: AxiosInstance = axios.create({
 // request拦截器
 service.interceptors.request.use(
   request => {
-    const token: string | undefined = Cookie.get('token')
+    const token: string | null = localStorage.getItem('token')
 
     // Conversion of hump nomenclature
 
@@ -57,7 +57,9 @@ service.interceptors.request.use(
     if (request.url === '/login') {
       return request
     }
-    request.headers!.Authorization = token as string
+    if (token) {
+      request.headers!.Authorization = `Bearer ${ token }`
+    }
     return request
   },
   error => {
@@ -78,6 +80,11 @@ service.interceptors.response.use(
      */
 
     const data: any = response.data
+    // 兼容后端直接返回数据的情况（非标准包装结构）
+    if (data._id || Array.isArray(data) || data.token) {
+      return data
+    }
+
     const msg: string = data.msg || ''
     if (msg.indexOf('user not log in') !== -1 && data.error === -1) {
       // TODO 写死的  之后要根据语言跳转
@@ -150,11 +157,13 @@ service.interceptors.response.use(
       errorRedirect(error.config.redirect)
     }
     if (error.response) {
-      return {
-        data: {},
-        error: error.response.status,
-        msg: codeMessage[error.response.status] || error.response.data.message
+      // 处理 401 未授权，跳转登录
+      if (error.response.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        Router.push('/login')
       }
+      return Promise.reject(error.response.data)
     } else {
       // 某些特定的接口 failed 需要跳转
       console.log(error)

@@ -15,6 +15,7 @@
     "InjectionKey": true,
     "MaybeRef": true,
     "MaybeRefOrGetter": true,
+    "MessageItem": true,
     "PropType": true,
     "Ref": true,
     "RouteLocationRaw": true,

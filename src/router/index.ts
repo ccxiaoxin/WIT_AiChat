@@ -1,6 +1,7 @@
+import type { App } from 'vue'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { createRouterGuards } from '@/router/permission'
 import routes from './routes'
-import { createWebHashHistory } from 'vue-router'
 import { isGithubDeployed } from '@/config'
 
 const history = isGithubDeployed
@@ -13,11 +14,9 @@ const router = createRouter({
 })
 
 export async function setupRouter(app: App) {
-  createRouterGuards(router)
   app.use(router)
-
+  createRouterGuards(router)
   await router.isReady()
 }
 
 export default router
-

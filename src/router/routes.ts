@@ -2,6 +2,14 @@ import childRoutes from '@/router/child-routes'
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login.vue'),
+    meta: {
+      title: '登录'
+    }
+  },
+  {
     path: '/',
     name: 'Root',
     redirect: {
