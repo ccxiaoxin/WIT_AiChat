@@ -1,1 +1,1 @@
-export const systemTitle = 'MVP Vue3 大模型单轮 AI 对话'
+export const systemTitle = '武汉工程大学计算机学院智能问答助手'

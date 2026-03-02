@@ -222,6 +222,10 @@ export const useBusinessStore = defineStore('business-store', {
                 this.systemModelName,
                 this.useRAG,
                 this.currentChatId!, // 传递当前会话ID
+                this.messageList.map(m => ({
+                  role: m.role,
+                  content: m.content
+                })), // 传递历史记录
                 (message: ChatMessage) => {
                   if (streamClosed) return
 

@@ -1,5 +1,6 @@
 <script lang="tsx" setup>
 import { defaultMockModelName, modelMappingList, triggerModelTermination } from '@/components/MarkdownPreview/models'
+import { renderMarkdownText } from '@/components/MarkdownPreview/plugins/markdown'
 import { type InputInst } from 'naive-ui'
 import type { SelectBaseOption } from 'naive-ui/es/select/src/interface'
 import { isGithubDeployed } from '@/config'
@@ -466,88 +467,85 @@ watch(() => businessStore.messageList.length, () => {
         </div>
 
         <!-- 历史消息渲染 -->
-        <div
-          v-for="(msg, index) in businessStore.messageList"
-          v-else
-          :key="index"
-          class="message-item"
-          :class="msg.role"
-        >
-          <div class="message-avatar">
-            <div
-              v-if="msg.role === 'user'"
-              class="i-carbon-user-avatar-filled-alt text-24 c-gray-500"
-            ></div>
-            <div
-              v-else
-              class="i-carbon-bot text-24 c-blue-500"
-            ></div>
-          </div>
-          <div class="message-content">
-            <!-- 如果是最后一条且是 assistant，且正在生成中，使用 MarkdownPreview 组件渲染流式效果 -->
-            <template v-if="index === businessStore.messageList.length - 1 && msg.role === 'assistant' && stylizingLoading">
-              <!-- RAG信息显示 (仅在生成时显示在顶部，或者你可以选择一直显示) -->
+        <template v-if="!businessStore.chatLoading && businessStore.messageList.length > 0">
+          <div
+            v-for="(msg, index) in businessStore.messageList"
+            :key="index"
+            class="message-item"
+            :class="msg.role"
+          >
+            <div class="message-avatar">
               <div
-                v-if="businessStore.useRAG && businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
-                class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
-              >
-                <n-space
-                  vertical
-                  :size="4"
+                v-if="msg.role === 'user'"
+                class="i-carbon-user-avatar-filled-alt text-24 c-gray-500"
+              ></div>
+              <div
+                v-else
+                class="i-carbon-bot text-24 c-blue-500"
+              ></div>
+            </div>
+            <div class="message-content">
+              <!-- 如果是最后一条且是 assistant，且正在生成中，使用 MarkdownPreview 组件渲染流式效果 -->
+              <template v-if="index === businessStore.messageList.length - 1 && msg.role === 'assistant' && stylizingLoading">
+                <!-- RAG信息显示 (仅在生成时显示在顶部，或者你可以选择一直显示) -->
+                <div
+                  v-if="businessStore.useRAG && businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
+                  class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
                 >
                   <n-space
-                    v-if="businessStore.currentCategory"
-                    align="center"
+                    vertical
+                    :size="4"
                   >
-                    <span class="c-#666 dark:c-#ccc">分类:</span>
-                    <n-tag
-                      type="info"
-                      size="small"
-                      :bordered="false"
+                    <n-space
+                      v-if="businessStore.currentCategory"
+                      align="center"
                     >
-                      {{ categoryMap[businessStore.currentCategory] || businessStore.currentCategory }}
-                    </n-tag>
-                  </n-space>
-                  <n-space
-                    v-if="businessStore.contextSources.length > 0"
-                    align="center"
-                  >
-                    <span class="c-#666 dark:c-#ccc">来源:</span>
-                    <n-tag
-                      v-for="(source, idx) in businessStore.contextSources"
-                      :key="idx"
-                      type="success"
-                      size="small"
-                      :bordered="false"
+                      <span class="c-#666 dark:c-#ccc">分类:</span>
+                      <n-tag
+                        type="info"
+                        size="small"
+                        :bordered="false"
+                      >
+                        {{ categoryMap[businessStore.currentCategory] || businessStore.currentCategory }}
+                      </n-tag>
+                    </n-space>
+                    <n-space
+                      v-if="businessStore.contextSources.length > 0"
+                      align="center"
                     >
-                      📚 {{ source }}
-                    </n-tag>
+                      <span class="c-#666 dark:c-#ccc">来源:</span>
+                      <n-tag
+                        v-for="(source, idx) in businessStore.contextSources"
+                        :key="idx"
+                        type="success"
+                        size="small"
+                        :bordered="false"
+                      >
+                        📚 {{ source }}
+                      </n-tag>
+                    </n-space>
                   </n-space>
-                </n-space>
-              </div>
+                </div>
 
-              <MarkdownPreview
-                ref="refReaderMarkdownPreview"
-                v-model:reader="outputTextReader"
-                :model="businessStore.currentModelItem?.modelName"
-                :transform-stream-fn="businessStore.currentTransformFn"
-                @failed="onFailedReader"
-                @completed="onCompletedReader"
-              />
-            </template>
-            <!-- 否则渲染静态内容 (历史记录) -->
-            <template v-else>
-              <!-- 对于历史记录中的 AI 回答，也可以简单渲染 Markdown，这里简化处理直接显示文本或使用 v-html -->
-              <!-- 为了更好的体验，建议这里也使用 MarkdownPreview 但传入静态内容，或者使用 markdown-it 渲染 -->
-              <div
-                class="static-message-content"
-                style="white-space: pre-wrap;"
-              >
-                {{ msg.content }}
-              </div>
-            </template>
+                <MarkdownPreview
+                  ref="refReaderMarkdownPreview"
+                  v-model:reader="outputTextReader"
+                  :model="businessStore.currentModelItem?.modelName"
+                  :transform-stream-fn="businessStore.currentTransformFn"
+                  @failed="onFailedReader"
+                  @completed="onCompletedReader"
+                />
+              </template>
+              <!-- 否则渲染静态内容 (历史记录) -->
+              <template v-else>
+                <div
+                  class="markdown-wrapper"
+                  v-html="renderMarkdownText(msg.content)"
+                ></div>
+              </template>
+            </div>
           </div>
-        </div>
+        </template>
 
         <!-- 欢迎页/空状态 -->
         <div

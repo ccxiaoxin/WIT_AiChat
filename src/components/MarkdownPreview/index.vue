@@ -389,7 +389,7 @@ const emptyPlaceholder = computed(() => {
         />
         <template v-else>
           <n-empty
-            v-if="!displayText"
+            v-if="!displayText && !readerLoading"
             size="large"
             class="font-bold"
           >

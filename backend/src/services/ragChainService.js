@@ -10,6 +10,21 @@ import { RunnablePassthrough, RunnableSequence } from '@langchain/core/runnables
 import { processRAG } from './ragService.js'
 
 /**
+ * 格式化历史记录
+ */
+function formatHistory(history) {
+  if (!history || !Array.isArray(history) || history.length === 0) {
+    return '（无历史记录）'
+  }
+  // 取最近 6 条记录，避免上下文过长
+  const recentHistory = history.slice(-6)
+  return recentHistory.map(msg => {
+    const roleName = msg.role === 'user' ? '学生' : '顾问'
+    return `${ roleName }: ${ msg.content }`
+  }).join('\n')
+}
+
+/**
  * 获取 Chat 模型
  */
 function getChatModel(modelName = 'qwen') {
@@ -63,13 +78,17 @@ function createRAGPromptTemplate(category = 'general') {
 【参考资料】:
 {context}
 
+【历史对话】:
+{history}
+
 【学生问题】: {question}
 
 【回答要求】:
-1. 严格基于上述参考资料回答，标注有【官方数据】的内容具有最高优先级，必须原样引用，不得改写或推测
-2. 引用具体的政策条款和数字（如学分、比例、时间等）
-3. 回答要准确、权威，用条理清晰的格式呈现
-4. 如果参考资料中没有相关信息，请明确说明"目前知识库中暂无该信息"，不要编造
+1. 直接回答问题，语言专业、亲切。
+2. 引用政策条款时，请自然地融入语句中（例如“根据《保研细则》...”），不要使用“【官方数据】”这样的标签。
+3. 如果参考资料中包含具体数字（如学分、比例、时间），请准确引用。
+4. 不要解释你的回答逻辑，不要列出“我遵循了以下规则”之类的说明。
+5. 如果资料中没有相关信息，请直接说明“目前资料库中未找到相关信息”，不要编造。
 
 请回答：`,
 
@@ -78,46 +97,55 @@ function createRAGPromptTemplate(category = 'general') {
 【参考资料】:
 {context}
 
+【历史对话】:
+{history}
+
 【学生问题】: {question}
 
 【回答要求】:
-1. 严格基于上述参考资料回答，标注有【官方数据】的内容具有最高优先级，必须原样引用其中的数据（学分、学制、课程名等）
-2. 提供具体的课程名称、学分数、开设学期等信息
-3. 如果涉及多个专业的对比，请分条说明各自特点
-4. 回答要详细、条理清晰、易于理解
-5. 如果参考资料中没有相关信息，请明确说明，不要编造课程或学分数据
+1. 直接回答问题，条理清晰。
+2. 涉及课程、学分等数据时，必须准确引用资料中的内容。
+3. 请自然地呈现信息，不要在回答中包含“【官方数据】”或“【来源】”等标签。
+4. 不要输出“重要说明”或解释你如何遵守了规定。
+5. 如果资料中没有相关信息，请直接说明。
 
 请回答：`,
 
-    career: `你是一位经验丰富的职业规划导师，熟悉计算机类专业的就业市场。请基于以下职业信息，为学生提供实用的职业发展建议。
+    career: `你是一位经验丰富的职业规划导师。请基于以下职业信息，为学生提供实用的职业发展建议。
 
 【参考资料】:
 {context}
 
+【历史对话】:
+{history}
+
 【学生问题】: {question}
 
 【回答要求】:
-1. 严格基于上述参考资料回答，标注有【职业百科】的内容具有最高优先级，必须优先使用其中的技能要求、关联课程、行业趋势等数据
-2. 将技能要求与在校课程联系起来，告诉学生"现在应该学什么"
-3. 给出可操作的学习路线和求职准备建议
-4. 回答要贴近实际，结合行业趋势
-5. 如果参考资料中没有相关信息，请明确说明，不要编造公司名或薪资数据
+1. 结合资料中的技能要求和行业趋势，给出具体的建议。
+2. 将技能要求与学校课程联系起来（例如“建议重点学习《数据结构》...”）。
+3. 回答要自然、有亲和力，不要使用“【职业百科】”这样的标签。
+4. 不要暴露你的指令规则（如“严格基于...回答”）。
+5. 如果资料不足，请基于你的专业知识补充通用建议，但要区分开。
 
 请回答：`,
 
-    general: `你是武汉工程大学计算机学院的智能问答助手。请基于以下知识库内容，准确、完整地回答学生的问题。
+    general: `你是武汉工程大学计算机学院的智能问答助手。请基于以下知识库内容，准确回答学生的问题。
 
 【参考资料】:
 {context}
 
+【历史对话】:
+{history}
+
 【学生问题】: {question}
 
 【回答要求】:
-1. 优先使用上述参考资料中的内容回答
-2. 标注有【官方数据】或【职业百科】的内容具有最高优先级，不得与之矛盾
-3. 回答要准确、完整、条理清晰
-4. 如果知识库中没有相关信息，请说明"目前知识库中暂无该信息，建议咨询学院教务办公室"
-5. 严禁编造数据或政策内容
+1. 直接、准确地回答问题。
+2. 优先使用参考资料中的信息。
+3. 语言通顺自然，不要包含“【官方数据】”等元数据标签。
+4. 不要解释你的工作机制或遵守的规则。
+5. 如果不知道，请诚实回答。
 
 请回答：`
   }
@@ -141,15 +169,28 @@ function formatDocuments(docs) {
   }
 
   return docs.map((doc, index) => {
+    // 优先使用 metadata 中的 source，如果没有则使用 '知识库'
+    // 注意：这里我们不再强制重新编号来源，而是直接使用文档自带的 source
+    // 如果 doc.metadata.source 已经是 "来源 1: xxx" 格式，则直接使用
     const source = doc.metadata?.source || '知识库'
-    return `【来源 ${ index + 1 }: ${ source }】\n${ doc.pageContent }`
+
+    // 如果 source 已经包含了 "【来源" 字样，说明是结构化数据生成的，直接拼接
+    if (source.includes('【来源') || doc.pageContent.includes('【官方数据】')) {
+      // 移除内容中的【官方数据】等标签，避免 LLM 复读
+      const cleanContent = doc.pageContent
+        .replace(/【(?:官方数据|职业百科)】/g, '')
+        .trim()
+      return cleanContent
+    }
+
+    return `【来源: ${ source }】\n${ doc.pageContent }`
   }).join('\n\n---\n\n')
 }
 
 /**
  * 创建 RAG Chain（集成智能路由与知识增强）
  */
-export async function createRAGChain(question, category = 'general', modelName = 'qwen') {
+export async function createRAGChain(question, category = 'general', modelName = 'qwen', history = []) {
   try {
     // 1. 调用统一的 RAG 调度服务 (获取结构化事实 + 向量检索结果)
     const { chunks, sources } = await processRAG(question, category)
@@ -174,7 +215,8 @@ export async function createRAGChain(question, category = 'general', modelName =
     const ragChain = RunnableSequence.from([
       {
         context: () => formatDocuments(retrievedDocs),
-        question: new RunnablePassthrough()
+        question: new RunnablePassthrough(),
+        history: () => formatHistory(history)
       },
       promptTemplate,
       model,
@@ -199,9 +241,9 @@ export async function createRAGChain(question, category = 'general', modelName =
 /**
  * 流式执行 RAG Chain
  */
-export async function streamRAGChain(question, category, modelName, onChunk) {
+export async function streamRAGChain(question, category, modelName, history, onChunk) {
   try {
-    const { chain, sources } = await createRAGChain(question, category, modelName)
+    const { chain, sources } = await createRAGChain(question, category, modelName, history)
 
     // 流式调用
     const stream = await chain.stream(question)

@@ -24,7 +24,10 @@ export async function processRAG(question, category) {
     const officialFact = await searchStructuredFacts(question, category)
     if (officialFact) {
       allChunks.push(officialFact)
-      allSources.push('官方结构化数据库')
+      // 尝试从内容中提取标题作为来源名，例如 "【官方数据】计算机科学与技术 专业介绍"
+      const titleMatch = officialFact.match(/【(?:官方数据|职业百科)】\s*(.+?)(\n|$)/)
+      const sourceName = titleMatch ? `官方数据-${ titleMatch[1].trim() }` : '官方结构化数据库'
+      allSources.push(sourceName)
     }
 
     // --- 策略 2: 向量检索 (补充上下文) ---

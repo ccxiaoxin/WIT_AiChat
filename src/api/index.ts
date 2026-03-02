@@ -43,7 +43,8 @@ export async function ragChatStream(
   question: string,
   modelName: string,
   useRAG: boolean,
-  chatId: string, // 新增 chatId
+  chatId: string,
+  history: Array<{ role: string; content: string }> = [], // 新增 history 参数
   onMessage: (message: ChatMessage) => void
 ): Promise<void> {
   const token = localStorage.getItem('token') // 获取 Token
@@ -57,7 +58,8 @@ export async function ragChatStream(
       question,
       modelName,
       useRAG,
-      chatId // 传递 chatId
+      chatId,
+      history // 传递 history
     })
   })
 

@@ -97,6 +97,7 @@ export async function streamChat(req, res) {
         question,
         category,
         modelName,
+        history,
         (chunk) => {
           if (!clientClosed) {
             fullAnswer += chunk // 收集回答
