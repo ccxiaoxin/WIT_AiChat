@@ -197,12 +197,12 @@ onMounted(() => {
           type="info"
           ghost
           block
-          @click="showUploadModal = true"
+          @click="$router.push('/chat/knowledge')"
         >
           <template #icon>
-            <div class="i-carbon-upload"></div>
+            <div class="i-carbon-settings"></div>
           </template>
-          上传知识库
+          管理知识库
         </n-button>
       </div>
 
@@ -220,46 +220,6 @@ onMounted(() => {
         退出登录
       </n-button>
     </div>
-
-    <!-- 上传模态框 -->
-    <n-modal v-model:show="showUploadModal">
-      <n-card
-        title="上传知识库文档"
-        style="width: 500px"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-      >
-        <n-upload
-          multiple
-          directory-dnd
-          action="/api/knowledge/upload"
-          :headers="{ Authorization: `Bearer ${userStore.token}` }"
-          @finish="handleUploadFinish"
-          @error="handleUploadError"
-          @before-upload="beforeUpload"
-        >
-          <n-upload-dragger>
-            <div style="margin-bottom: 12px">
-              <div
-                class="i-carbon-cloud-upload"
-                style="font-size: 48px; color: #18a058;"
-              ></div>
-            </div>
-            <n-text style="font-size: 16px">
-              点击或者拖动文件到该区域来上传
-            </n-text>
-            <n-p
-              depth="3"
-              style="margin-top: 8px"
-            >
-              支持 PDF, DOCX, TXT, MD 等格式
-            </n-p>
-          </n-upload-dragger>
-        </n-upload>
-      </n-card>
-    </n-modal>
   </aside>
 </template>
 
@@ -281,6 +241,18 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 0 10px;
+}
+
+.delete-btn {
+  opacity: 0;
+  color: #ff4d4f;
+  padding: 4px;
+  border-radius: 4px;
+  transition: opacity 0.2s;
+
+  &:hover {
+    background-color: rgb(255 77 79 / 10%);
+  }
 }
 
 .history-item {
@@ -320,18 +292,6 @@ onMounted(() => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-}
-
-.delete-btn {
-  opacity: 0;
-  color: #ff4d4f;
-  padding: 4px;
-  border-radius: 4px;
-  transition: opacity 0.2s;
-
-  &:hover {
-    background-color: rgba(255, 77, 79, 0.1);
   }
 }
 

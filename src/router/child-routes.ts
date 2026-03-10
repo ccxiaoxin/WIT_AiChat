@@ -13,6 +13,15 @@ const childrenRoutes: Array<RouteRecordRaw> = [
         path: '',
         name: 'ChatIndex',
         component: () => import('@/views/chat.vue')
+      },
+      {
+        path: 'knowledge',
+        name: 'KnowledgeManage',
+        component: () => import('@/views/knowledge.vue'),
+        meta: {
+          title: '知识库管理',
+          requiresAdmin: true
+        }
       }
     ]
   }

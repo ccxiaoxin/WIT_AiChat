@@ -127,22 +127,22 @@ export interface AuthResponse {
 
 // 登录
 export function login(data: any) {
-  return request.post<AuthResponse>('/users/login', data)
+  return request.post('/users/login', data) as Promise<AuthResponse>
 }
 
 // 注册
 export function register(data: any) {
-  return request.post<AuthResponse>('/users/register', data)
+  return request.post('/users/register', data) as Promise<AuthResponse>
 }
 
 // 注册管理员
 export function registerAdmin(data: any) {
-  return request.post<AuthResponse>('/users/register-admin', data)
+  return request.post('/users/register-admin', data) as Promise<AuthResponse>
 }
 
 // 获取用户信息
 export function getUserInfo() {
-  return request.get<UserInfo>('/users/me')
+  return request.get('/users/me') as Promise<UserInfo>
 }
 
 // --- 历史记录相关接口 ---
@@ -164,19 +164,67 @@ export interface ChatDetail {
 }
 
 export function getHistoryList() {
-  return request.get<ChatSession[]>('/history')
+  return request.get('/history') as Promise<ChatSession[]>
 }
 
 export function createChat(title?: string) {
-  return request.post<ChatDetail>('/history', {
+  return request.post('/history', {
     title
-  })
+  }) as Promise<ChatDetail>
 }
 
 export function getHistoryDetail(id: string) {
-  return request.get<ChatDetail>(`/history/${ id }`)
+  return request.get(`/history/${ id }`) as Promise<ChatDetail>
 }
 
 export function deleteChat(id: string) {
   return request.delete(`/history/${ id }`)
+}
+
+// --- 知识库管理相关接口 ---
+
+export interface ParseDocResponse {
+  success: boolean
+  data: {
+    sourceName: string
+    chunks: string[]
+  }
+  error?: string
+}
+
+export interface KnowledgeDoc {
+  source: string
+  category: string
+  chunkCount: number
+}
+
+// 获取知识库列表
+export function getKnowledgeListApi() {
+  return request.get('/knowledge/list') as Promise<{ success: boolean, data: KnowledgeDoc[] }>
+}
+
+// 获取文档片段
+export function getKnowledgeChunksApi(source: string) {
+  return request.get('/knowledge/chunks', { source }) as Promise<{ success: boolean, data: any[] }>
+}
+
+// 删除文档
+export function deleteKnowledgeDocApi(source: string) {
+  return request.delete('/knowledge/delete', { data: { source } }) as Promise<{ success: boolean }>
+}
+
+// 上传并解析文档
+export function parseKnowledgeDoc(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/knowledge/parse', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }) as Promise<ParseDocResponse>
+}
+
+// 保存编辑后的分块到向量库
+export function saveKnowledgeChunks(data: { chunks: string[], category: string, sourceName: string }) {
+  return request.post('/knowledge/save', data)
 }

@@ -23,8 +23,9 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.3",
     "langchain": "^0.3.0",
-    "mammoth": "^1.8.0",
+    "mammoth": "^1.11.0",
     "mongoose": "^9.2.2",
+    "multer": "^2.1.1",
     "nanoid": "^5.0.7",
     "pdf-parse": "^1.1.1"
   },

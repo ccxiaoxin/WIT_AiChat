@@ -60,7 +60,7 @@ app.use((err, req, res, next) => {
   })
 })
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`🚀 RAG问答系统后端服务启动成功！`)
   console.log(`📡 服务地址: http://localhost:${ PORT }`)
   console.log(`🏥 健康检查: http://localhost:${ PORT }/health`)
@@ -69,6 +69,23 @@ app.listen(PORT, async () => {
   // 异步预热分类器标杆向量（不阻塞服务启动）
   warmUpClassifier().catch(err => {
     console.warn('[启动] 分类器预热失败，将在首次请求时重试:', err.message)
+  })
+})
+
+// 优雅关闭：监听进程终止信号
+process.on('SIGINT', () => {
+  console.log('\n[系统] 收到 SIGINT 信号，正在关闭服务...')
+  server.close(() => {
+    console.log('[系统] 3001 端口已释放，服务已完全关闭')
+    process.exit(0)
+  })
+})
+
+process.on('SIGTERM', () => {
+  console.log('\n[系统] 收到 SIGTERM 信号，正在关闭服务...')
+  server.close(() => {
+    console.log('[系统] 3001 端口已释放，服务已完全关闭')
+    process.exit(0)
   })
 })
 
