@@ -88,3 +88,44 @@ export const deleteChat = async (req, res) => {
   }
 }
 
+// @desc    更新消息反馈
+// @route   PUT /api/history/:chatId/message/:messageId/feedback
+// @access  Private
+export const updateFeedback = async (req, res) => {
+  const { chatId, messageId } = req.params
+  const { feedback, feedbackReason } = req.body
+
+  try {
+    const chat = await Chat.findOne({
+      _id: chatId,
+      user: req.user._id
+    })
+
+    if (!chat) {
+      return res.status(404).json({ message: '对话不存在' })
+    }
+
+    const message = chat.messages.id(messageId)
+    if (!message) {
+      return res.status(404).json({ message: '消息不存在' })
+    }
+
+    if (message.role !== 'assistant') {
+      return res.status(400).json({ message: '只能对助手的回答进行反馈' })
+    }
+
+    message.feedback = feedback
+    if (feedback === 'dislike') {
+      message.feedbackReason = feedbackReason
+    } else {
+      message.feedbackReason = undefined
+    }
+
+    await chat.save()
+
+    res.json({ success: true, message: '反馈已提交' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+

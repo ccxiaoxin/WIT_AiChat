@@ -204,6 +204,19 @@ onMounted(() => {
           </template>
           管理知识库
         </n-button>
+        <n-button
+          size="small"
+          type="success"
+          ghost
+          block
+          style="margin-top: 8px;"
+          @click="$router.push('/chat/stats')"
+        >
+          <template #icon>
+            <div class="i-carbon-chart-pie"></div>
+          </template>
+          数据统计
+        </n-button>
       </div>
 
       <n-button

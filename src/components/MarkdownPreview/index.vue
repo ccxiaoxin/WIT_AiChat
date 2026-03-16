@@ -1,22 +1,18 @@
 <script lang="tsx" setup>
 import { renderMarkdownText, renderMermaidProcess } from './plugins/markdown'
 
-import type { CrossTransformFunction, TransformFunction } from './models'
+import type { CrossTransformFunction, TransformFunction } from './models';
 import { defaultMockModelName } from './models'
 
 interface Props {
   reader?: ReadableStreamDefaultReader<Uint8Array> | null | undefined
-  model: string | null| undefined
+  model: string | null | undefined
   transformStreamFn: TransformFunction | null | undefined
 }
 
-const props = withDefaults(
-  defineProps<Props>(),
-  {
-    reader: null
-  }
-)
-
+const props = withDefaults(defineProps<Props>(), {
+  reader: null
+})
 
 // 定义响应式变量
 const displayText = ref('')
@@ -27,12 +23,7 @@ const isAbort = ref(false)
 
 const isCompleted = ref(false)
 
-const emit = defineEmits([
-  'failed',
-  'completed',
-  'update:reader'
-])
-
+const emit = defineEmits(['failed', 'completed', 'update:reader'])
 
 const refWrapperContent = ref<HTMLElement>()
 
@@ -54,10 +45,9 @@ const WaitTextRender = defineComponent({
       >
         {{
           default: () => (
-            <div
-              whitespace-break-spaces
-              text-center
-            >请求排队处理中，请耐心等待...</div>
+            <div whitespace-break-spaces text-center>
+              请求排队处理中，请耐心等待...
+            </div>
           ),
           icon: () => (
             <n-icon class="text-30">
@@ -121,7 +111,6 @@ const renderedContent = computed(() => {
   return `${ renderedMarkdown.value }`
 })
 
-
 const initialized = ref(false)
 
 const initializeStart = () => {
@@ -138,7 +127,6 @@ const initializeEnd = () => {
 const readIsOver = ref(false)
 const readTextStream = async () => {
   if (!props.reader) return
-
 
   const textDecoder = new TextDecoder('utf-8')
   readerLoading.value = true
@@ -205,7 +193,10 @@ const scrollToBottomByThreshold = async () => {
   if (!refWrapperContent.value) return
 
   const threshold = 100
-  const distanceToBottom = refWrapperContent.value.scrollHeight - refWrapperContent.value.scrollTop - refWrapperContent.value.clientHeight
+  const distanceToBottom =
+    refWrapperContent.value.scrollHeight -
+    refWrapperContent.value.scrollTop -
+    refWrapperContent.value.clientHeight
   if (distanceToBottom <= threshold) {
     scrollToBottom()
   }
@@ -285,7 +276,6 @@ watch(
   }
 )
 
-
 onUnmounted(() => {
   resetStatus()
 })
@@ -342,7 +332,7 @@ const emptyPlaceholder = computed(() => {
     :rotate="false"
     class="bg-#fff:30"
     :style="{
-      '--n-opacity-spinning': '0.3'
+      '--n-opacity-spinning': '0.3',
     }"
   >
     <transition name="fade">
@@ -371,22 +361,14 @@ const emptyPlaceholder = computed(() => {
       flex="1 ~"
       min-w-0
       min-h-0
-      :class="[
-        reader
-          ? ''
-          : 'justify-center items-center'
-      ]"
+      :class="[reader ? '' : 'justify-center items-center']"
     >
       <div
         text-16
         class="w-full h-full overflow-hidden"
-        :class="[
-          !displayText && 'flex items-center justify-center'
-        ]"
+        :class="[!displayText && 'flex items-center justify-center']"
       >
-        <WaitTextRender
-          v-if="waitingForQueue && !displayText"
-        />
+        <WaitTextRender v-if="waitingForQueue && !displayText" />
         <template v-else>
           <n-empty
             v-if="!displayText && !readerLoading"
@@ -415,9 +397,7 @@ const emptyPlaceholder = computed(() => {
               class="markdown-wrapper"
               v-html="renderedContent"
             ></div>
-            <WaitTextRender
-              v-if="waitingForQueue"
-            />
+            <WaitTextRender v-if="waitingForQueue" />
             <div
               v-if="readerLoading"
               size-24
@@ -430,9 +410,9 @@ const emptyPlaceholder = computed(() => {
   </n-spin>
 </template>
 
+
 <style lang="scss">
 .markdown-wrapper {
-
   h1 {
     font-size: 2em;
   }
@@ -457,17 +437,25 @@ const emptyPlaceholder = computed(() => {
     font-size: 0.85em;
   }
 
-  h1,h2,h3,h4,h5,h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin: 0 auto;
     line-height: 1.25;
   }
 
-  & ul,ol {
+  & ul,
+  ol {
     padding-left: 1.5em;
     line-height: 0.8;
   }
 
-  & ul,li,ol {
+  & ul,
+  li,
+  ol {
     list-style-position: outside;
     white-space: normal;
   }
@@ -476,7 +464,7 @@ const emptyPlaceholder = computed(() => {
     line-height: 1.7;
 
     & > code {
-      --at-apply: 'bg-#e5e5e5';
+      --at-apply: "bg-#e5e5e5";
       --at-apply: whitespace-pre m-2px px-6px py-2px rounded-5px;
     }
   }
@@ -504,10 +492,9 @@ const emptyPlaceholder = computed(() => {
     line-height: 1.4;
 
     & > code {
-      --at-apply: 'bg-#e5e5e5';
+      --at-apply: "bg-#e5e5e5";
       --at-apply: whitespace-pre mx-4px px-6px py-3px rounded-5px;
     }
-
 
     img {
       display: inline-block;
@@ -515,7 +502,7 @@ const emptyPlaceholder = computed(() => {
   }
 
   li > p {
-    line-height: 2
+    line-height: 2;
   }
 
   blockquote {
@@ -545,7 +532,8 @@ const emptyPlaceholder = computed(() => {
     --at-apply: w-fit border-collapse my-16;
   }
 
-  th, td {
+  th,
+  td {
     --at-apply: p-7 text-left border border-solid border-#ccc;
   }
 

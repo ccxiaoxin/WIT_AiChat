@@ -22,6 +22,15 @@ const childrenRoutes: Array<RouteRecordRaw> = [
           title: '知识库管理',
           requiresAdmin: true
         }
+      },
+      {
+        path: 'stats',
+        name: 'DataStats',
+        component: () => import('@/views/stats.vue'),
+        meta: {
+          title: '数据统计',
+          requiresAdmin: true
+        }
       }
     ]
   }

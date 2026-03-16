@@ -40,7 +40,10 @@ async function getUserIdFromRequest(req) {
  * 流式对话控制器（集成智能路由、知识增强与历史记录预留）
  */
 export async function streamChat(req, res) {
-  const { question, modelName = 'qwen', useRAG = true, history = [], chatId } = req.body
+  let { question, modelName = 'qwen', useRAG = true, history = [], chatId } = req.body
+  
+  // 强制开启RAG
+  useRAG = true
 
   if (!question || !question.trim()) {
     return res.status(400).json({
@@ -62,6 +65,7 @@ export async function streamChat(req, res) {
 
   // 收集完整的回答内容，用于存入数据库
   let fullAnswer = ''
+  let detectedCategory = 'general' // 声明在外层，方便保存历史时使用
 
   try {
     // 设置 SSE 响应头
@@ -78,6 +82,7 @@ export async function streamChat(req, res) {
       // 1. 智能路由：问题分类
       const classifyStart = Date.now()
       const category = await classifyQuestion(question)
+      detectedCategory = category // 保存到外层变量
       const classifyTime = Date.now() - classifyStart
       console.log(`[智能路由] 识别分类: ${ category } (耗时 ${ classifyTime }ms)`)
 
@@ -150,7 +155,7 @@ export async function streamChat(req, res) {
 
     // 5. 异步保存对话历史 (在响应结束后执行，不阻塞前端)
     if (userId && chatId && fullAnswer) {
-      saveChatHistory(userId, chatId, question, fullAnswer).catch(err => {
+      saveChatHistory(userId, chatId, question, fullAnswer, detectedCategory).catch(err => {
         console.error('[History] 保存历史记录失败:', err.message)
       })
     }
@@ -186,7 +191,7 @@ export async function streamChat(req, res) {
 /**
  * 保存对话历史到数据库
  */
-async function saveChatHistory(userId, chatId, question, answer) {
+async function saveChatHistory(userId, chatId, question, answer, category) {
   try {
     const chat = await Chat.findOne({
       _id: chatId,
@@ -197,7 +202,8 @@ async function saveChatHistory(userId, chatId, question, answer) {
       // 追加用户提问
       chat.messages.push({
         role: 'user',
-        content: question
+        content: question,
+        category: category // 保存分类
       })
       // 追加 AI 回答
       chat.messages.push({

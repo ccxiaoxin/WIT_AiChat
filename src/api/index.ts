@@ -181,6 +181,20 @@ export function deleteChat(id: string) {
   return request.delete(`/history/${ id }`)
 }
 
+export function updateMessageFeedback(chatId: string, messageId: string, data: { feedback: 'like' | 'dislike' | 'none', feedbackReason?: string }) {
+  return request.put(`/history/${chatId}/message/${messageId}/feedback`, data) as Promise<{ success: boolean, message: string }>
+}
+
+// --- 统计相关接口 ---
+
+export function getCategoryStats() {
+  return request.get('/stats/categories') as Promise<{ success: boolean, data: Array<{ name: string, value: number }> }>
+}
+
+export function getDislikedFeedbacks() {
+  return request.get('/stats/feedbacks') as Promise<{ success: boolean, data: any[] }>
+}
+
 // --- 知识库管理相关接口 ---
 
 export interface ParseDocResponse {

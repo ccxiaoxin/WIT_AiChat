@@ -6,7 +6,10 @@
 import { ChatOpenAI } from '@langchain/openai'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { StringOutputParser } from '@langchain/core/output_parsers'
-import { RunnablePassthrough, RunnableSequence } from '@langchain/core/runnables'
+import {
+  RunnablePassthrough,
+  RunnableSequence
+} from '@langchain/core/runnables'
 import { processRAG } from './ragService.js'
 
 /**
@@ -18,10 +21,12 @@ function formatHistory(history) {
   }
   // 取最近 6 条记录，避免上下文过长
   const recentHistory = history.slice(-6)
-  return recentHistory.map(msg => {
-    const roleName = msg.role === 'user' ? '学生' : '顾问'
-    return `${ roleName }: ${ msg.content }`
-  }).join('\n')
+  return recentHistory
+    .map((msg) => {
+      const roleName = msg.role === 'user' ? '学生' : '顾问'
+      return `${ roleName }: ${ msg.content }`
+    })
+    .join('\n')
 }
 
 /**
@@ -168,29 +173,39 @@ function formatDocuments(docs) {
     return '（当前知识库中未检索到相关内容）'
   }
 
-  return docs.map((doc, index) => {
-    // 优先使用 metadata 中的 source，如果没有则使用 '知识库'
-    // 注意：这里我们不再强制重新编号来源，而是直接使用文档自带的 source
-    // 如果 doc.metadata.source 已经是 "来源 1: xxx" 格式，则直接使用
-    const source = doc.metadata?.source || '知识库'
+  return docs
+    .map((doc, index) => {
+      // 优先使用 metadata 中的 source，如果没有则使用 '知识库'
+      // 注意：这里我们不再强制重新编号来源，而是直接使用文档自带的 source
+      // 如果 doc.metadata.source 已经是 "来源 1: xxx" 格式，则直接使用
+      const source = doc.metadata?.source || '知识库'
 
-    // 如果 source 已经包含了 "【来源" 字样，说明是结构化数据生成的，直接拼接
-    if (source.includes('【来源') || doc.pageContent.includes('【官方数据】')) {
-      // 移除内容中的【官方数据】等标签，避免 LLM 复读
-      const cleanContent = doc.pageContent
-        .replace(/【(?:官方数据|职业百科)】/g, '')
-        .trim()
-      return cleanContent
-    }
+      // 如果 source 已经包含了 "【来源" 字样，说明是结构化数据生成的，直接拼接
+      if (
+        source.includes('【来源') ||
+        doc.pageContent.includes('【官方数据】')
+      ) {
+        // 移除内容中的【官方数据】等标签，避免 LLM 复读
+        const cleanContent = doc.pageContent
+          .replace(/【(?:官方数据|职业百科)】/g, '')
+          .trim()
+        return cleanContent
+      }
 
-    return `【来源: ${ source }】\n${ doc.pageContent }`
-  }).join('\n\n---\n\n')
+      return `【来源: ${ source }】\n${ doc.pageContent }`
+    })
+    .join('\n\n---\n\n')
 }
 
 /**
  * 创建 RAG Chain（集成智能路由与知识增强）
  */
-export async function createRAGChain(question, category = 'general', modelName = 'qwen', history = []) {
+export async function createRAGChain(
+  question,
+  category = 'general',
+  modelName = 'qwen',
+  history = []
+) {
   try {
     // 1. 调用统一的 RAG 调度服务 (获取结构化事实 + 向量检索结果)
     const { chunks, sources } = await processRAG(question, category)
@@ -231,7 +246,6 @@ export async function createRAGChain(question, category = 'general', modelName =
       retrievedDocs,
       sources: uniqueSources
     }
-
   } catch (error) {
     console.error('[RAG Chain] 创建失败:', error.message)
     throw error
@@ -241,9 +255,20 @@ export async function createRAGChain(question, category = 'general', modelName =
 /**
  * 流式执行 RAG Chain
  */
-export async function streamRAGChain(question, category, modelName, history, onChunk) {
+export async function streamRAGChain(
+  question,
+  category,
+  modelName,
+  history,
+  onChunk
+) {
   try {
-    const { chain, sources } = await createRAGChain(question, category, modelName, history)
+    const { chain, sources } = await createRAGChain(
+      question,
+      category,
+      modelName,
+      history
+    )
 
     // 流式调用
     const stream = await chain.stream(question)
@@ -256,7 +281,6 @@ export async function streamRAGChain(question, category, modelName, history, onC
       success: true,
       sources
     }
-
   } catch (error) {
     console.error('[RAG Chain] 流式执行失败:', error.message)
     throw error
@@ -268,7 +292,11 @@ export async function streamRAGChain(question, category, modelName, history, onC
  */
 export async function invokeRAGChain(question, category, modelName) {
   try {
-    const { chain, sources } = await createRAGChain(question, category, modelName)
+    const { chain, sources } = await createRAGChain(
+      question,
+      category,
+      modelName
+    )
 
     const result = await chain.invoke(question)
 
@@ -276,7 +304,6 @@ export async function invokeRAGChain(question, category, modelName) {
       result,
       sources
     }
-
   } catch (error) {
     console.error('[RAG Chain] 执行失败:', error.message)
     throw error

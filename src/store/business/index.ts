@@ -47,7 +47,7 @@ export const useBusinessStore = defineStore('business-store', {
   state: (): BusinessState => {
     return {
       systemModelName: defaultModelName,
-      useRAG: true,
+      useRAG: true, // 默认开启RAG
       currentCategory: null,
       contextSources: [],
       backendConnected: false,

@@ -5,6 +5,7 @@ import chatRoutes from './routes/chat.js'
 import knowledgeRoutes from './routes/knowledge.js'
 import userRoutes from './routes/user.js'
 import historyRoutes from './routes/history.js'
+import statsRoutes from './routes/stats.js'
 import { warmUpClassifier } from './services/classifierService.js'
 import connectDB from './config/db.js'
 
@@ -34,6 +35,7 @@ app.use('/api/chat', chatRoutes)
 app.use('/api/knowledge', knowledgeRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/history', historyRoutes)
+app.use('/api/stats', statsRoutes)
 
 // 健康检查
 app.get('/health', (req, res) => {

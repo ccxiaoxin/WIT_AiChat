@@ -1,16 +1,19 @@
 <script lang="tsx" setup>
 import { defaultMockModelName, modelMappingList, triggerModelTermination } from '@/components/MarkdownPreview/models'
 import { renderMarkdownText } from '@/components/MarkdownPreview/plugins/markdown'
-import { type InputInst } from 'naive-ui'
+import { type InputInst, useMessage, useDialog, NRadioGroup, NRadio, NSpace, NInput as NInputComp } from 'naive-ui'
 import type { SelectBaseOption } from 'naive-ui/es/select/src/interface'
 import { isGithubDeployed } from '@/config'
 import NavSideBar from '@/components/Navigation/NavSideBar.vue'
+import { updateMessageFeedback } from '@/api'
 
 import { UAParser } from 'ua-parser-js'
 
 const route = useRoute()
 const router = useRouter()
 const businessStore = useBusinessStore()
+const message = useMessage()
+const dialog = useDialog()
 
 // RAG相关：分类映射（与后端 CATEGORIES 对齐）
 const categoryMap: Record<string, string> = {
@@ -29,9 +32,9 @@ const categoryMap: Record<string, string> = {
 onMounted(async () => {
   const connected = await businessStore.checkBackendConnection()
   if (connected) {
-    console.log('✅ 后端服务已连接，RAG模式已启用')
+    console.log('✅ 后端服务已连接')
   } else {
-    console.warn('⚠️ 后端服务未连接，将使用直调模式')
+    console.warn('⚠️ 后端服务未连接')
   }
 })
 
@@ -317,6 +320,93 @@ watch(() => businessStore.messageList.length, () => {
   scrollToBottom()
 })
 
+const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
+  if (!businessStore.currentChatId || !msg._id) return
+
+  // 如果点击的是已经选中的状态，则取消反馈
+  if (msg.feedback === type) {
+    try {
+      await updateMessageFeedback(businessStore.currentChatId, msg._id, { feedback: 'none' })
+      msg.feedback = 'none'
+      message.success('已取消反馈')
+    } catch (error: any) {
+      message.error('取消反馈失败：' + error.message)
+    }
+    return
+  }
+
+  if (type === 'like') {
+    try {
+      await updateMessageFeedback(businessStore.currentChatId, msg._id, { feedback: 'like' })
+      msg.feedback = 'like'
+      message.success('感谢您的反馈！')
+    } catch (error: any) {
+      message.error('反馈失败：' + error.message)
+    }
+  } else if (type === 'dislike') {
+    const reasonOptions = [
+      { label: '答非所问', value: '答非所问' },
+      { label: '信息过时', value: '信息过时' },
+      { label: '胡编乱造', value: '胡编乱造' },
+      { label: '其他原因', value: '其他' }
+    ]
+    
+    let selectedReason = ref('答非所问')
+    let customReason = ref('')
+    
+    const d = dialog.create({
+      title: '请告诉我们不满意的原因',
+      content: () => {
+        return h('div', { style: 'margin-top: 10px; min-width: 300px; display: flex; flex-direction: column; gap: 16px;' }, [
+          h(
+            NRadioGroup,
+            {
+              value: selectedReason.value,
+              'onUpdate:value': (v: string) => { 
+                selectedReason.value = v 
+                d.content = d.content
+              },
+              name: 'reasonGroup'
+            },
+            () => h(NSpace, { vertical: true }, () =>
+              reasonOptions.map(opt =>
+                h(NRadio, { value: opt.value }, () => opt.label)
+              )
+            )
+          ),
+          selectedReason.value === '其他' ? h(
+            NInputComp,
+            {
+              value: customReason.value,
+              'onUpdate:value': (v: string) => { 
+                customReason.value = v 
+              },
+              type: 'textarea',
+              placeholder: '请输入具体原因...',
+              rows: 3
+            }
+          ) : null
+        ])
+      },
+      positiveText: '提交',
+      negativeText: '取消',
+      onPositiveClick: async () => {
+        try {
+          const finalReason = selectedReason.value === '其他' ? (customReason.value || '其他原因') : selectedReason.value
+          await updateMessageFeedback(businessStore.currentChatId!, msg._id, { 
+            feedback: 'dislike', 
+            feedbackReason: finalReason 
+          })
+          msg.feedback = 'dislike'
+          message.success('感谢您的反馈，我们将持续优化！')
+        } catch (error: any) {
+          message.error('反馈失败：' + error.message)
+        }
+      }
+    })
+  }
+}
+
 </script>
 
 <template>
@@ -353,25 +443,6 @@ watch(() => businessStore.messageList.length, () => {
                   :options="modelListSelections"
                 />
 
-                <!-- RAG模式开关 -->
-                <n-tooltip v-if="businessStore.backendConnected">
-                  <template #trigger>
-                    <n-switch
-                      v-model:value="businessStore.useRAG"
-                      class="ml-10"
-                      :disabled="stylizingLoading"
-                    >
-                      <template #checked>
-                        RAG
-                      </template>
-                      <template #unchecked>
-                        直调
-                      </template>
-                    </n-switch>
-                  </template>
-                  <div>{{ businessStore.useRAG ? 'RAG增强模式：使用知识库检索增强回答' : '直调模式：直接调用大模型' }}</div>
-                </n-tooltip>
-
                 <CustomTooltip
                   :disabled="false"
                 >
@@ -387,12 +458,6 @@ watch(() => businessStore.messageList.length, () => {
                     class="mt-5"
                   >
                     ❌ 后端服务：未连接（需要启动）
-                  </div>
-                  <div class="mt-5">
-                    <strong>RAG模式</strong>：基于知识库检索增强回答
-                  </div>
-                  <div>
-                    <strong>直调模式</strong>：直接调用大模型（无知识库）
                   </div>
                   <div class="mt-5">
                     <strong>架构说明</strong>：所有请求统一由后端处理
@@ -489,7 +554,7 @@ watch(() => businessStore.messageList.length, () => {
               <template v-if="index === businessStore.messageList.length - 1 && msg.role === 'assistant' && stylizingLoading">
                 <!-- RAG信息显示 (仅在生成时显示在顶部，或者你可以选择一直显示) -->
                 <div
-                  v-if="businessStore.useRAG && businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
+                  v-if="businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
                   class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
                 >
                   <n-space
@@ -542,6 +607,29 @@ watch(() => businessStore.messageList.length, () => {
                   class="markdown-wrapper"
                   v-html="renderMarkdownText(msg.content)"
                 ></div>
+                <!-- 反馈按钮区 -->
+                <div v-if="msg.role === 'assistant'" class="flex items-center gap-4 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <n-button 
+                    size="tiny" 
+                    quaternary 
+                    :type="msg.feedback === 'like' ? 'primary' : 'default'"
+                    @click="handleFeedback(msg, 'like')"
+                  >
+                    <template #icon>
+                      <div :class="msg.feedback === 'like' ? 'i-carbon-thumbs-up-filled' : 'i-carbon-thumbs-up'"></div>
+                    </template>
+                  </n-button>
+                  <n-button 
+                    size="tiny" 
+                    quaternary 
+                    :type="msg.feedback === 'dislike' ? 'error' : 'default'"
+                    @click="handleFeedback(msg, 'dislike')"
+                  >
+                    <template #icon>
+                      <div :class="msg.feedback === 'dislike' ? 'i-carbon-thumbs-down-filled' : 'i-carbon-thumbs-down'"></div>
+                    </template>
+                  </n-button>
+                </div>
               </template>
             </div>
           </div>

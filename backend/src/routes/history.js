@@ -1,5 +1,5 @@
 import express from 'express'
-import { createChat, deleteChat, getHistoryDetail, getHistoryList } from '../controllers/historyController.js'
+import { createChat, deleteChat, getHistoryDetail, getHistoryList, updateFeedback } from '../controllers/historyController.js'
 import { protect } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
@@ -13,6 +13,9 @@ router.route('/')
 router.route('/:id')
   .get(getHistoryDetail)
   .delete(deleteChat)
+
+router.route('/:chatId/message/:messageId/feedback')
+  .put(updateFeedback)
 
 export default router
 
