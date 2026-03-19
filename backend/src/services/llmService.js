@@ -9,55 +9,20 @@ const LLM_CONFIGS = {
     url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     key: process.env.VITE_QWEN_KEY,
     model: 'qwen-plus'
-  },
-  'deepseek-v3': {
-    url: 'https://api.deepseek.com/chat/completions',
-    key: process.env.VITE_DEEPSEEK_KEY,
-    model: 'deepseek-chat'
-  },
-  'deepseek-deep': {
-    url: 'https://api.deepseek.com/chat/completions',
-    key: process.env.VITE_DEEPSEEK_KEY,
-    model: 'deepseek-reasoner'
-  },
-  moonshot: {
-    url: 'https://api.moonshot.cn/v1/chat/completions',
-    key: process.env.VITE_MOONSHOT_KEY,
-    model: 'moonshot-v1-8k'
-  },
-  spark: {
-    url: 'https://spark-api-open.xf-yun.com/v1/chat/completions',
-    key: process.env.VITE_SPARK_KEY,
-    model: '4.0Ultra'
-  },
-  siliconflow: {
-    url: 'https://api.siliconflow.cn/v1/chat/completions',
-    key: process.env.VITE_SILICONFLOW_KEY,
-    model: 'THUDM/glm-4-9b-chat'
-  },
-  ollama3: {
-    url: 'http://localhost:11434/api/chat',
-    key: null,
-    model: 'llama3',
-    isOllama: true
   }
 }
 
 /**
- * 流式调用大模型
+ * 流式调用大模型 (通义千问)
  */
 export async function callLLMStream(prompt, modelName, onChunk) {
-  const config = LLM_CONFIGS[modelName] || LLM_CONFIGS.qwen
+  const config = LLM_CONFIGS.qwen
 
-  if (!config.isOllama && !config.key) {
-    throw new Error(`${ modelName } 模型的 API Key 未配置`)
+  if (!config.key) {
+    throw new Error('通义千问 API Key 未配置')
   }
 
   try {
-    if (config.isOllama) {
-      return callOllamaStream(prompt, config, onChunk)
-    }
-
     const response = await axios.post(
       config.url,
       {
@@ -115,10 +80,10 @@ export async function callLLMStream(prompt, modelName, onChunk) {
  * 非流式调用 (用于分类等内部任务)
  */
 export async function callLLM(prompt, modelName = 'qwen', maxTokens = 100) {
-  const config = LLM_CONFIGS[modelName] || LLM_CONFIGS.qwen
+  const config = LLM_CONFIGS.qwen
 
-  if (!config.isOllama && !config.key) {
-    throw new Error(`${ modelName } API Key 未配置`)
+  if (!config.key) {
+    throw new Error('通义千问 API Key 未配置')
   }
 
   try {
@@ -149,18 +114,10 @@ export async function callLLM(prompt, modelName = 'qwen', maxTokens = 100) {
   }
 }
 
-/**
- * Ollama 专用逻辑 (保持不变)
- */
-async function callOllamaStream(prompt, config, onChunk) {
-  // ... 保持原有 Ollama 逻辑 ...
-  return new Promise((resolve) => resolve()) // 占位
-}
-
 export function getSupportedModels() {
-  return Object.keys(LLM_CONFIGS).map(key => ({
-    name: key,
-    model: LLM_CONFIGS[key].model,
-    configured: LLM_CONFIGS[key].isOllama || !!LLM_CONFIGS[key].key
-  }))
+  return [{
+    name: 'qwen',
+    model: LLM_CONFIGS.qwen.model,
+    configured: !!LLM_CONFIGS.qwen.key
+  }]
 }

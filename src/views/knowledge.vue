@@ -1,11 +1,28 @@
 <template>
   <div class="knowledge-container">
-    <div class="header">
-      <h2>知识库管理</h2>
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <div class="i-carbon-document-multiple text-28"></div>
+        </div>
+        <div class="header-text">
+          <h2>知识库管理</h2>
+          <p>管理和维护系统知识文档</p>
+        </div>
+      </div>
       <n-space>
-        <n-button v-if="viewMode === 'list'" type="primary" @click="createNewDoc">新增文档</n-button>
-        <n-button v-if="viewMode === 'edit'" @click="backToList">返回列表</n-button>
-        <n-button @click="$router.push('/chat')">返回对话</n-button>
+        <n-button v-if="viewMode === 'list'" type="primary" @click="createNewDoc">
+          <template #icon><div class="i-carbon-add"></div></template>
+          新增文档
+        </n-button>
+        <n-button v-if="viewMode === 'edit'" @click="backToList">
+          <template #icon><div class="i-carbon-arrow-left"></div></template>
+          返回列表
+        </n-button>
+        <n-button @click="$router.push('/chat')">
+          <template #icon><div class="i-carbon-chat"></div></template>
+          返回对话
+        </n-button>
       </n-space>
     </div>
 
@@ -331,27 +348,99 @@ const submitChunks = async () => {
 
 <style scoped>
 .knowledge-container {
-  padding: 20px;
-  max-width: 1000px;
+  padding: 32px;
+  max-width: 1100px;
   margin: 0 auto;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  min-height: 100vh;
 }
 
-.header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 28px;
+  padding: 24px 28px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  :deep(.n-button) {
+    border-radius: 10px;
+    height: 40px;
+    padding: 0 20px;
+    font-weight: 500;
+
+    &.n-button--primary-type {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+      &:hover {
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+      }
+    }
+  }
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+}
+
+.header-text {
+  h2 {
+    margin: 0 0 4px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #333;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: #888;
+  }
 }
 
 .list-section {
   flex: 1;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+  :deep(.n-data-table) {
+    .n-data-table-th {
+      background: #f8f9fc;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .n-data-table-td {
+      padding: 16px 12px;
+    }
+
+    .n-data-table-tr:hover .n-data-table-td {
+      background: #f8f9fc;
+    }
+  }
 }
 
 .edit-section {
@@ -362,7 +451,20 @@ const submitChunks = async () => {
 }
 
 .upload-section {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
+
+  :deep(.n-upload-dragger) {
+    border-radius: 16px;
+    border: 2px dashed #ddd;
+    background: #fff;
+    padding: 48px 24px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.02);
+    }
+  }
 }
 
 .editor-section {
@@ -370,40 +472,105 @@ const submitChunks = async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+  }
 }
 
 .actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+
+  :deep(.n-select) {
+    .n-base-selection {
+      border-radius: 10px;
+    }
+  }
+
+  :deep(.n-input) {
+    border-radius: 10px;
+  }
+
+  :deep(.n-button--primary-type) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
 }
 
 .chunks-list {
   flex: 1;
   overflow-y: auto;
   padding-right: 10px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 3px;
+
+    &:hover {
+      background: #ccc;
+    }
+  }
 }
 
 .chunk-item {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
   border: 1px solid #ebeef5;
-  border-radius: 4px;
-  padding: 15px;
-  background-color: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  background: #fafbfc;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+  }
+
+  :deep(.n-input) {
+    border-radius: 10px;
+    background: #fff;
+  }
 }
 
 .chunk-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  font-weight: bold;
-  color: #606266;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+}
+
+.chunk-actions {
+  :deep(.n-button) {
+    border-radius: 8px;
+  }
 }
 </style>

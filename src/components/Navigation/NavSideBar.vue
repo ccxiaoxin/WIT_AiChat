@@ -242,29 +242,62 @@ onMounted(() => {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: #f9f9f9;
-  border-right: 1px solid #eee;
+  background: linear-gradient(180deg, #1a1c2e 0%, #2d3250 100%);
+  border-right: none;
 }
 
 .sidebar-header {
-  padding: 15px;
+  padding: 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  :deep(.n-button) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    height: 44px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+  }
 }
 
 .history-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 10px;
+  padding: 12px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
 }
 
 .delete-btn {
   opacity: 0;
-  color: #ff4d4f;
-  padding: 4px;
-  border-radius: 4px;
-  transition: opacity 0.2s;
+  color: #ff6b6b;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.2s;
 
   &:hover {
-    background-color: rgb(255 77 79 / 10%);
+    background-color: rgba(255, 107, 107, 0.15);
   }
 }
 
@@ -272,16 +305,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   margin-bottom: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
-  color: #333;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
 
   &:hover {
-    background-color: #e6f7ff;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.1);
 
     .delete-btn {
       opacity: 1;
@@ -289,9 +326,11 @@ onMounted(() => {
   }
 
   &.active {
-    background-color: #e6f7ff;
-    color: #1890ff;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    color: #fff;
     font-weight: 500;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
   }
 }
 
@@ -300,6 +339,10 @@ onMounted(() => {
   align-items: center;
   flex: 1;
   overflow: hidden;
+
+  .i-carbon-chat {
+    color: rgba(255, 255, 255, 0.5);
+  }
 
   .text-truncate {
     white-space: nowrap;
@@ -310,35 +353,39 @@ onMounted(() => {
 
 .empty-history {
   text-align: center;
-  color: #999;
-  margin-top: 40px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 60px;
   font-size: 13px;
 }
 
 .user-profile {
-  padding: 15px;
-  border-top: 1px solid #eee;
-  background: #fff;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
-  background-color: #1890ff;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 16px;
-  margin-right: 10px;
+  font-size: 18px;
+  margin-right: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .info-content {
@@ -349,26 +396,64 @@ onMounted(() => {
 .username {
   font-weight: 600;
   font-size: 14px;
-  color: #333;
-  margin-bottom: 2px;
+  color: #fff;
+  margin-bottom: 4px;
 }
 
 .role-badge {
   display: inline-block;
   font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background-color: #f0f0f0;
-  color: #666;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
 
   &.admin {
-    background-color: #f6ffed;
-    color: #52c41a;
-    border: 1px solid #b7eb8f;
+    background: linear-gradient(135deg, rgba(82, 196, 26, 0.2) 0%, rgba(115, 209, 61, 0.2) 100%);
+    color: #73d13d;
+    border: 1px solid rgba(115, 209, 61, 0.3);
   }
 }
 
 .admin-actions {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+
+  :deep(.n-button) {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    &.n-button--info-type {
+      &:hover {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.4);
+        color: #667eea;
+      }
+    }
+
+    &.n-button--success-type {
+      &:hover {
+        background: rgba(82, 196, 26, 0.2);
+        border-color: rgba(82, 196, 26, 0.4);
+        color: #52c41a;
+      }
+    }
+
+    &.n-button--error-type {
+      &:hover {
+        background: rgba(255, 77, 79, 0.2);
+        border-color: rgba(255, 77, 79, 0.4);
+        color: #ff4d4f;
+      }
+    }
+  }
 }
 </style>

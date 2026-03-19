@@ -271,18 +271,10 @@ const PromptTag = defineComponent({
   render() {
     return (
       <div
-        b="~ solid transparent"
-        hover="shadow-[--shadow] b-primary bg-#e8e8e8"
-        class={[
-          'px-10 py-2 rounded-7 text-12',
-          'max-w-230 transition-all-300 select-none cursor-pointer',
-          'c-#525252 bg-#ededed'
-        ]}
-        style={{
-          '--shadow': '3px 3px 3px -1px rgba(0,0,0,0.1)'
-        }}
+        class="prompt-tag"
         onClick={this.handleClick}
       >
+        <span class="prompt-icon">💡</span>
         <n-ellipsis
           tooltip={{
             contentClass: 'wrapper-tooltip-scroller',
@@ -542,11 +534,11 @@ const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
             <div class="message-avatar">
               <div
                 v-if="msg.role === 'user'"
-                class="i-carbon-user-avatar-filled-alt text-24 c-gray-500"
+                class="i-carbon-user-avatar-filled-alt text-22"
               ></div>
               <div
                 v-else
-                class="i-carbon-bot text-24 c-blue-500"
+                class="i-carbon-bot text-22"
               ></div>
             </div>
             <div class="message-content">
@@ -638,10 +630,27 @@ const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
         <!-- 欢迎页/空状态 -->
         <div
           v-if="businessStore.messageList.length === 0 && !businessStore.chatLoading"
-          class="flex flex-col items-center justify-center h-full text-gray-400"
+          class="welcome-container"
         >
-          <div class="i-carbon-chat text-64 mb-4"></div>
-          <div>问一个问题，我才会消失 ~</div>
+          <div class="welcome-icon">
+            <div class="i-carbon-chat-bot text-72"></div>
+          </div>
+          <h2 class="welcome-title">智能问答助手</h2>
+          <p class="welcome-subtitle">您好！我是您的智能问答助手，可以回答关于专业政策、课程安排、就业方向等问题。</p>
+          <div class="welcome-tips">
+            <div class="tip-item">
+              <div class="i-carbon-lightning text-18"></div>
+              <span>快速响应</span>
+            </div>
+            <div class="tip-item">
+              <div class="i-carbon-book text-18"></div>
+              <span>知识丰富</span>
+            </div>
+            <div class="tip-item">
+              <div class="i-carbon-chat text-18"></div>
+              <span>自然对话</span>
+            </div>
+          </div>
         </div>
 
         <!-- 后端未连接警告 -->
@@ -729,52 +738,215 @@ const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
 <style lang="scss" scoped>
 .message-list-container {
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-attachment: fixed;
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+  }
 }
 
 .message-item {
   display: flex;
   margin-bottom: 24px;
+  animation: fadeInUp 0.4s ease-out;
 
   &.user {
     flex-direction: row-reverse;
 
-    .message-content {
-      background-color: #e6f7ff;
-      border-radius: 12px 0 12px 12px;
-      margin-right: 12px;
+    .message-avatar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
     }
 
-    .message-avatar {
-      margin-left: 0;
+    .message-content {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border-radius: 20px 4px 20px 20px;
+      margin-right: 12px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     }
   }
 
   &.assistant {
+    .message-avatar {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      box-shadow: 0 4px 14px rgba(56, 239, 125, 0.3);
+    }
+
     .message-content {
-      background-color: #f9f9f9;
-      border-radius: 0 12px 12px 12px;
+      background: #fff;
+      border-radius: 4px 20px 20px 20px;
       margin-left: 12px;
-      width: 100%; // 让 Markdown 预览占满剩余空间
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.05);
     }
   }
 }
 
 .message-avatar {
   flex-shrink: 0;
-  margin-top: 4px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
 }
 
 .message-content {
-  padding: 12px 16px;
-  max-width: 85%;
+  padding: 14px 18px;
+  max-width: 75%;
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #333;
   overflow-wrap: break-word;
+  transition: all 0.3s ease;
 }
 
 .static-message-content {
   white-space: pre-wrap;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 欢迎页样式
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.welcome-icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 15px 50px rgba(102, 126, 234, 0.5);
+  }
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-subtitle {
+  font-size: 15px;
+  color: #666;
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.welcome-tips {
+  display: flex;
+  gap: 24px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #fff;
+  border-radius: 20px;
+  color: #666;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    color: #667eea;
+  }
+}
+
+// 快捷提示标签样式
+:deep(.prompt-tag) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  max-width: 280px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #667eea;
+  }
+
+  .prompt-icon {
+    font-size: 14px;
+  }
 }
 </style>
