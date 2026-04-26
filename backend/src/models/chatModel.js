@@ -27,6 +27,14 @@ const messageSchema = mongoose.Schema({
   // 新增：点踩的具体原因
   feedbackReason: {
     type: String
+  },
+  // 新增：智能路由使用的模型
+  routedModel: {
+    type: String
+  },
+  isAutoRouted: {
+    type: Boolean,
+    default: false
   }
 })
 

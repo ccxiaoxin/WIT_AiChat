@@ -14,7 +14,7 @@ export function getXxxxPrompt (params) {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
 
 export interface ChatMessage {
-  type: 'category' | 'context' | 'content' | 'done' | 'error'
+  type: 'category' | 'context' | 'content' | 'done' | 'error' | 'model_routed'
   data: any
 }
 

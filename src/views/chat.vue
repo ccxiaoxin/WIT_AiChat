@@ -128,6 +128,14 @@ const onCompletedReader = () => {
   stylizingLoading.value = false
   // 对话完成后，重新拉取历史记录以更新标题（确保“新对话”标题被替换）
   businessStore.loadHistoryList()
+
+  // 延迟重新拉取当前会话详情，获取新消息的数据库 _id，以便后续能正常点赞
+  setTimeout(() => {
+    if (businessStore.currentChatId) {
+      businessStore.silentUpdateChatHistory(businessStore.currentChatId)
+    }
+  }, 500)
+
   setTimeout(() => {
     if (refInputTextString.value) {
       refInputTextString.value.focus()
@@ -313,7 +321,12 @@ watch(() => businessStore.messageList.length, () => {
 })
 
 const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
-  if (!businessStore.currentChatId || !msg._id) return
+  if (!businessStore.currentChatId) return
+
+  if (!msg._id) {
+    message.warning('数据正在同步中，请稍等一秒后再试~')
+    return
+  }
 
   // 如果点击的是已经选中的状态，则取消反馈
   if (msg.feedback === type) {
@@ -546,13 +559,26 @@ const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
               <template v-if="index === businessStore.messageList.length - 1 && msg.role === 'assistant' && stylizingLoading">
                 <!-- RAG信息显示 (仅在生成时显示在顶部，或者你可以选择一直显示) -->
                 <div
-                  v-if="businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0)"
+                  v-if="businessStore.backendConnected && (businessStore.currentCategory || businessStore.contextSources.length > 0 || businessStore.routedModel)"
                   class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
                 >
                   <n-space
                     vertical
                     :size="4"
                   >
+                    <n-space
+                      v-if="businessStore.routedModel"
+                      align="center"
+                    >
+                      <span class="c-#666 dark:c-#ccc">🤖 {{ businessStore.isAutoRouted ? '智能路由' : '使用模型' }}:</span>
+                      <n-tag
+                        type="warning"
+                        size="small"
+                        :bordered="false"
+                      >
+                        {{ businessStore.isAutoRouted ? '已为您切换至 ' : '' }}{{ businessStore.routedModel === 'deepseek' ? 'DeepSeek' : businessStore.routedModel === 'moonshot' ? 'Kimi' : 'Qwen' }}
+                      </n-tag>
+                    </n-space>
                     <n-space
                       v-if="businessStore.currentCategory"
                       align="center"
@@ -595,6 +621,19 @@ const handleFeedback = async (msg: any, type: 'like' | 'dislike') => {
               </template>
               <!-- 否则渲染静态内容 (历史记录) -->
               <template v-else>
+                <div
+                  v-if="msg.role === 'assistant' && msg.routedModel"
+                  class="px-10 py-6 mb-5 bg-blue-50 dark:bg-blue-900/20 rounded-5 text-12"
+                >
+                  <n-space vertical :size="4">
+                    <n-space align="center">
+                      <span class="c-#666 dark:c-#ccc">🤖 {{ msg.isAutoRouted ? '智能路由' : '使用模型' }}:</span>
+                      <n-tag type="warning" size="small" :bordered="false">
+                        {{ msg.isAutoRouted ? '已为您切换至 ' : '' }}{{ msg.routedModel === 'deepseek' ? 'DeepSeek' : msg.routedModel === 'moonshot' ? 'Kimi' : 'Qwen' }}
+                      </n-tag>
+                    </n-space>
+                  </n-space>
+                </div>
                 <div
                   class="markdown-wrapper"
                   v-html="renderMarkdownText(msg.content)"

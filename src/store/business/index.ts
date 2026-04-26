@@ -10,6 +10,8 @@ export interface MessageItem {
   role: 'user' | 'assistant'
   content: string
   timestamp?: string
+  routedModel?: string
+  isAutoRouted?: boolean
 }
 
 export interface BusinessState {
@@ -22,6 +24,8 @@ export interface BusinessState {
   chatLoading: boolean // 新增：会话加载状态
   messageList: MessageItem[] // 新增：当前会话的消息列表
   historyList: ChatSession[] // 新增：历史会话列表
+  routedModel: string | null // 新增：智能路由最终选择的模型
+  isAutoRouted: boolean // 新增：是否是自动路由的
 }
 
 /**
@@ -46,7 +50,7 @@ const ragPassthroughTransform: CrossTransformFunction = (readValue, textDecoder)
 export const useBusinessStore = defineStore('business-store', {
   state: (): BusinessState => {
     return {
-      systemModelName: defaultModelName,
+      systemModelName: 'auto', // 默认使用智能路由
       useRAG: true, // 默认开启RAG
       currentCategory: null,
       contextSources: [],
@@ -54,7 +58,9 @@ export const useBusinessStore = defineStore('business-store', {
       currentChatId: null,
       chatLoading: false,
       messageList: [], // 初始化为空
-      historyList: [] // 初始化为空
+      historyList: [], // 初始化为空
+      routedModel: null,
+      isAutoRouted: false
     }
   },
   getters: {
@@ -128,6 +134,30 @@ export const useBusinessStore = defineStore('business-store', {
             updatedAt: new Date().toISOString()
           }
         ]
+      }
+    },
+
+    /**
+     * 静默更新当前会话的最新状态（不触发 loading 骨架屏）
+     */
+    async silentUpdateChatHistory(chatId: string) {
+      if (!chatId) return
+      try {
+        const res = await getHistoryDetail(chatId)
+        if (res && res.messages) {
+          // 只更新最后一条消息的 _id 和 feedback 等状态，不替换整个数组以避免闪烁
+          const lastServerMsg = res.messages[res.messages.length - 1]
+          const lastLocalMsg = this.messageList[this.messageList.length - 1]
+          
+          if (lastServerMsg && lastLocalMsg && lastServerMsg.role === lastLocalMsg.role) {
+             Object.assign(lastLocalMsg, lastServerMsg)
+          } else {
+             // 如果对不上，再整体替换
+             this.messageList = res.messages
+          }
+        }
+      } catch (error) {
+        console.error('静默同步历史记录失败', error)
       }
     },
 
@@ -209,6 +239,8 @@ export const useBusinessStore = defineStore('business-store', {
         // 重置RAG状态
         this.currentCategory = null
         this.contextSources = []
+        this.routedModel = null
+        this.isAutoRouted = false
 
         let streamClosed = false
 
@@ -230,6 +262,14 @@ export const useBusinessStore = defineStore('business-store', {
                   if (streamClosed) return
 
                   switch (message.type) {
+                    case 'model_routed':
+                      this.routedModel = message.data?.model || null
+                      this.isAutoRouted = message.data?.isAutoRouted || false
+                      // 同步保存到当前消息项中，供历史记录展示使用
+                      this.messageList[currentMessageIndex].routedModel = this.routedModel || undefined
+                      this.messageList[currentMessageIndex].isAutoRouted = this.isAutoRouted
+                      console.log(`[RAG] 智能路由结果: ${this.routedModel} (Auto: ${this.isAutoRouted})`)
+                      break
                     case 'category':
                       this.currentCategory = message.data
                       console.log('[RAG] 问题分类:', message.data)

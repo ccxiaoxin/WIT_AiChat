@@ -1,6 +1,7 @@
 import { classifyQuestion } from '../services/classifierService.js'
 import { streamRAGChain } from '../services/ragChainService.js'
 import { callLLMStream } from '../services/llmService.js'
+import { determineBestModel } from '../services/routerService.js'
 import Chat from '../models/chatModel.js'
 import jwt from 'jsonwebtoken'
 /**
@@ -66,6 +67,8 @@ export async function streamChat(req, res) {
   // 收集完整的回答内容，用于存入数据库
   let fullAnswer = ''
   let detectedCategory = 'general' // 声明在外层，方便保存历史时使用
+  let finalModel = modelName
+  let isAutoRouted = false
 
   try {
     // 设置 SSE 响应头
@@ -94,6 +97,22 @@ export async function streamChat(req, res) {
         data: category
       })
 
+      // 1.5 智能路由：决定最终模型
+      if (modelName === 'auto') {
+        finalModel = determineBestModel(category)
+        isAutoRouted = true
+        console.log(`[智能路由] Auto模式触发，根据分类 ${category} 自动分配模型: ${finalModel}`)
+      }
+
+      // 通知前端实际使用的模型
+      safeSend(res, {
+        type: 'model_routed',
+        data: {
+          model: finalModel,
+          isAutoRouted
+        }
+      })
+
       // 2. 执行 RAG Chain (内部已集成知识增强与向量检索)
       console.log(`[RAG Chain] 开始执行调度...`)
       const ragStart = Date.now()
@@ -101,7 +120,7 @@ export async function streamChat(req, res) {
       const { sources } = await streamRAGChain(
         question,
         category,
-        modelName,
+        finalModel,
         history,
         (chunk) => {
           if (!clientClosed) {
@@ -155,7 +174,7 @@ export async function streamChat(req, res) {
 
     // 5. 异步保存对话历史 (在响应结束后执行，不阻塞前端)
     if (userId && chatId && fullAnswer) {
-      saveChatHistory(userId, chatId, question, fullAnswer, detectedCategory).catch(err => {
+      saveChatHistory(userId, chatId, question, fullAnswer, detectedCategory, finalModel, isAutoRouted).catch(err => {
         console.error('[History] 保存历史记录失败:', err.message)
       })
     }
@@ -191,7 +210,7 @@ export async function streamChat(req, res) {
 /**
  * 保存对话历史到数据库
  */
-async function saveChatHistory(userId, chatId, question, answer, category) {
+async function saveChatHistory(userId, chatId, question, answer, category, routedModel, isAutoRouted) {
   try {
     const chat = await Chat.findOne({
       _id: chatId,
@@ -208,7 +227,9 @@ async function saveChatHistory(userId, chatId, question, answer, category) {
       // 追加 AI 回答
       chat.messages.push({
         role: 'assistant',
-        content: answer
+        content: answer,
+        routedModel: routedModel,
+        isAutoRouted: isAutoRouted
       })
 
       // 如果是新对话（只有这两条消息），尝试用问题作为标题

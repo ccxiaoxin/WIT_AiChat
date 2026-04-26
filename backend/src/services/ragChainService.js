@@ -3,80 +3,80 @@
  * 实现完整的 RAG 流程：检索 + 增强 + 生成
  */
 
-import { ChatOpenAI } from '@langchain/openai'
-import { PromptTemplate } from '@langchain/core/prompts'
-import { StringOutputParser } from '@langchain/core/output_parsers'
+import { ChatOpenAI } from "@langchain/openai";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
 import {
   RunnablePassthrough,
-  RunnableSequence
-} from '@langchain/core/runnables'
-import { processRAG } from './ragService.js'
+  RunnableSequence,
+} from "@langchain/core/runnables";
+import { processRAG } from "./ragService.js";
 
 /**
  * 格式化历史记录
  */
 function formatHistory(history) {
   if (!history || !Array.isArray(history) || history.length === 0) {
-    return '（无历史记录）'
+    return "（无历史记录）";
   }
   // 取最近 6 条记录，避免上下文过长
-  const recentHistory = history.slice(-6)
+  const recentHistory = history.slice(-6);
   return recentHistory
     .map((msg) => {
-      const roleName = msg.role === 'user' ? '学生' : '顾问'
-      return `${ roleName }: ${ msg.content }`
+      const roleName = msg.role === "user" ? "学生" : "顾问";
+      return `${roleName}: ${msg.content}`;
     })
-    .join('\n')
+    .join("\n");
 }
 
 /**
  * 获取 Chat 模型
  */
-function getChatModel(modelName = 'qwen') {
+function getChatModel(modelName = "qwen") {
   const modelConfigs = {
     qwen: {
       apiKey: process.env.VITE_QWEN_KEY,
       configuration: {
-        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+        baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
       },
-      modelName: 'qwen-plus',
+      modelName: "qwen-plus",
       temperature: 0.7,
-      streaming: true
+      streaming: true,
     },
     deepseek: {
       apiKey: process.env.VITE_DEEPSEEK_KEY,
       configuration: {
-        baseURL: 'https://api.deepseek.com'
+        baseURL: "https://api.deepseek.com",
       },
-      modelName: 'deepseek-chat',
+      modelName: "deepseek-chat",
       temperature: 0.7,
-      streaming: true
+      streaming: true,
     },
     moonshot: {
       apiKey: process.env.VITE_MOONSHOT_KEY,
       configuration: {
-        baseURL: 'https://api.moonshot.cn/v1'
+        baseURL: "https://api.moonshot.cn/v1",
       },
-      modelName: 'moonshot-v1-8k',
+      modelName: "kimi-k2-0905-preview",
       temperature: 0.7,
-      streaming: true
-    }
-  }
+      streaming: true,
+    },
+  };
 
-  const config = modelConfigs[modelName] || modelConfigs.qwen
+  const config = modelConfigs[modelName] || modelConfigs.qwen;
 
   if (!config.apiKey) {
-    throw new Error(`${ modelName } 模型的 API Key 未配置`)
+    throw new Error(`${modelName} 模型的 API Key 未配置`);
   }
 
-  return new ChatOpenAI(config)
+  return new ChatOpenAI(config);
 }
 
 /**
  * 创建 RAG Prompt 模板
  * 根据分类使用不同的角色设定和回答要求
  */
-function createRAGPromptTemplate(category = 'general') {
+function createRAGPromptTemplate(category = "general") {
   const categoryPrompts = {
     policy: `你是武汉工程大学计算机学院的政策咨询顾问。请基于以下政策文件内容，准确回答学生的问题。
 
@@ -152,17 +152,17 @@ function createRAGPromptTemplate(category = 'general') {
 4. 不要解释你的工作机制或遵守的规则。
 5. 如果不知道，请诚实回答。
 
-请回答：`
-  }
+请回答：`,
+  };
 
   // 映射细分分类到模板
-  let templateKey = 'general'
-  if (category.startsWith('policy')) templateKey = 'policy'
-  else if (category.startsWith('major')) templateKey = 'major'
-  else if (category === 'career') templateKey = 'career'
+  let templateKey = "general";
+  if (category.startsWith("policy")) templateKey = "policy";
+  else if (category.startsWith("major")) templateKey = "major";
+  else if (category === "career") templateKey = "career";
 
-  const template = categoryPrompts[templateKey] || categoryPrompts.general
-  return PromptTemplate.fromTemplate(template)
+  const template = categoryPrompts[templateKey] || categoryPrompts.general;
+  return PromptTemplate.fromTemplate(template);
 }
 
 /**
@@ -170,7 +170,7 @@ function createRAGPromptTemplate(category = 'general') {
  */
 function formatDocuments(docs) {
   if (!docs || docs.length === 0) {
-    return '（当前知识库中未检索到相关内容）'
+    return "（当前知识库中未检索到相关内容）";
   }
 
   return docs
@@ -178,23 +178,23 @@ function formatDocuments(docs) {
       // 优先使用 metadata 中的 source，如果没有则使用 '知识库'
       // 注意：这里我们不再强制重新编号来源，而是直接使用文档自带的 source
       // 如果 doc.metadata.source 已经是 "来源 1: xxx" 格式，则直接使用
-      const source = doc.metadata?.source || '知识库'
+      const source = doc.metadata?.source || "知识库";
 
       // 如果 source 已经包含了 "【来源" 字样，说明是结构化数据生成的，直接拼接
       if (
-        source.includes('【来源') ||
-        doc.pageContent.includes('【官方数据】')
+        source.includes("【来源") ||
+        doc.pageContent.includes("【官方数据】")
       ) {
         // 移除内容中的【官方数据】等标签，避免 LLM 复读
         const cleanContent = doc.pageContent
-          .replace(/【(?:官方数据|职业百科)】/g, '')
-          .trim()
-        return cleanContent
+          .replace(/【(?:官方数据|职业百科)】/g, "")
+          .trim();
+        return cleanContent;
       }
 
-      return `【来源: ${ source }】\n${ doc.pageContent }`
+      return `【来源: ${source}】\n${doc.pageContent}`;
     })
-    .join('\n\n---\n\n')
+    .join("\n\n---\n\n");
 }
 
 /**
@@ -202,53 +202,53 @@ function formatDocuments(docs) {
  */
 export async function createRAGChain(
   question,
-  category = 'general',
-  modelName = 'qwen',
-  history = []
+  category = "general",
+  modelName = "qwen",
+  history = [],
 ) {
   try {
     // 1. 调用统一的 RAG 调度服务 (获取结构化事实 + 向量检索结果)
-    const { chunks, sources } = await processRAG(question, category)
+    const { chunks, sources } = await processRAG(question, category);
 
-    console.log(`[RAG Chain] 调度完成，获取到 ${ chunks.length } 个上下文片段`)
+    console.log(`[RAG Chain] 调度完成，获取到 ${chunks.length} 个上下文片段`);
 
     // 2. 将 chunks 转换为 LangChain 期望的 Document 格式 (chunks 和 sources 保持 1:1)
     const retrievedDocs = chunks.map((content, i) => ({
       pageContent: content,
       metadata: {
-        source: sources[i] || '知识库'
-      }
-    }))
+        source: sources[i] || "知识库",
+      },
+    }));
 
     // 3. 创建 Prompt 模板
-    const promptTemplate = createRAGPromptTemplate(category)
+    const promptTemplate = createRAGPromptTemplate(category);
 
     // 4. 获取 Chat 模型
-    const model = getChatModel(modelName)
+    const model = getChatModel(modelName);
 
     // 5. 使用 LCEL 构建 RAG Chain
     const ragChain = RunnableSequence.from([
       {
         context: () => formatDocuments(retrievedDocs),
         question: new RunnablePassthrough(),
-        history: () => formatHistory(history)
+        history: () => formatHistory(history),
       },
       promptTemplate,
       model,
-      new StringOutputParser()
-    ])
+      new StringOutputParser(),
+    ]);
 
     // 6. 去重来源列表（用于前端展示）
-    const uniqueSources = [...new Set(sources)]
+    const uniqueSources = [...new Set(sources)];
 
     return {
       chain: ragChain,
       retrievedDocs,
-      sources: uniqueSources
-    }
+      sources: uniqueSources,
+    };
   } catch (error) {
-    console.error('[RAG Chain] 创建失败:', error.message)
-    throw error
+    console.error("[RAG Chain] 创建失败:", error.message);
+    throw error;
   }
 }
 
@@ -260,30 +260,30 @@ export async function streamRAGChain(
   category,
   modelName,
   history,
-  onChunk
+  onChunk,
 ) {
   try {
     const { chain, sources } = await createRAGChain(
       question,
       category,
       modelName,
-      history
-    )
+      history,
+    );
 
     // 流式调用
-    const stream = await chain.stream(question)
+    const stream = await chain.stream(question);
 
     for await (const chunk of stream) {
-      onChunk(chunk)
+      onChunk(chunk);
     }
 
     return {
       success: true,
-      sources
-    }
+      sources,
+    };
   } catch (error) {
-    console.error('[RAG Chain] 流式执行失败:', error.message)
-    throw error
+    console.error("[RAG Chain] 流式执行失败:", error.message);
+    throw error;
   }
 }
 
@@ -295,17 +295,17 @@ export async function invokeRAGChain(question, category, modelName) {
     const { chain, sources } = await createRAGChain(
       question,
       category,
-      modelName
-    )
+      modelName,
+    );
 
-    const result = await chain.invoke(question)
+    const result = await chain.invoke(question);
 
     return {
       result,
-      sources
-    }
+      sources,
+    };
   } catch (error) {
-    console.error('[RAG Chain] 执行失败:', error.message)
-    throw error
+    console.error("[RAG Chain] 执行失败:", error.message);
+    throw error;
   }
 }

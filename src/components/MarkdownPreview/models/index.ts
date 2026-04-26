@@ -199,17 +199,62 @@ export const defaultModelName = 'qwen'
 
 export const modelMappingList: TypesModelLLM[] = [
   {
-    label: '🌙 通义千问 (Qwen-Plus)',
-    modelName: 'qwen',
+    label: '🤖 智能路由 (Auto)',
+    modelName: 'auto',
     transformStreamValue(readValue) {
       const stream = parseJsonLikeData(readValue)
-      if (stream.done) {
+      if (stream?.done) {
         return {
           done: true
         }
       }
       return {
-        content: stream.choices[0].delta.content || ''
+        content: stream?.choices?.[0]?.delta?.content || ''
+      }
+    }
+  },
+  {
+    label: '🌙 通义千问 (Qwen-Plus)',
+    modelName: 'qwen',
+    transformStreamValue(readValue) {
+      const stream = parseJsonLikeData(readValue)
+      if (stream?.done) {
+        return {
+          done: true
+        }
+      }
+      return {
+        content: stream?.choices?.[0]?.delta?.content || ''
+      }
+    }
+  },
+  {
+    label: '🐋 DeepSeek (代码/逻辑强)',
+    modelName: 'deepseek',
+    transformStreamValue(readValue) {
+      const stream = parseJsonLikeData(readValue)
+      if (stream?.done) {
+        return {
+          done: true
+        }
+      }
+      return {
+        content: stream?.choices?.[0]?.delta?.content || ''
+      }
+    }
+  },
+  {
+    label: '🌕 Kimi (长文本强)',
+    modelName: 'moonshot',
+    transformStreamValue(readValue) {
+      const stream = parseJsonLikeData(readValue)
+      if (stream?.done) {
+        return {
+          done: true
+        }
+      }
+      return {
+        content: stream?.choices?.[0]?.delta?.content || ''
       }
     }
   }
